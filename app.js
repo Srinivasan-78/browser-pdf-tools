@@ -1,6 +1,11 @@
 const { PDFDocument, degrees, rgb, StandardFonts } = PDFLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
+// URL of the FastAPI + PyMuPDF backend (see /backend). Required only for the
+// "Edit Text" tool, which needs real font extraction/content-stream editing
+// that isn't feasible purely client-side. Leave empty to disable that tool.
+const BACKEND_URL = ""; // e.g. "https://your-backend.example.com"
+
 const $ = id => document.getElementById(id);
 
 const TOOLS = [
@@ -18,7 +23,7 @@ const TOOLS = [
 let state = {};
 
 function resetState(){
-  state = { tool:null, files:[], fileBytes:[], pdfDoc:null, pageOrder:[], removedSet:new Set(), keepSet:new Set(), rotationDelta:{}, texts:{}, edits:{}, fontEmbeds:{} };
+  state = { tool:null, files:[], fileBytes:[], pdfDoc:null, pageOrder:[], removedSet:new Set(), keepSet:new Set(), rotationDelta:{}, texts:{}, edits:{} };
 }
 resetState();
 
@@ -113,7 +118,10 @@ async function enterWorkspace(){
   }
   if (state.tool.id === 'edit'){
     const hint = document.createElement('span');
-    hint.className='status'; hint.textContent = 'Click a thumbnail, then click existing text on the page to change it. The replacement is drawn in the closest matching standard font (weight/style detected automatically).';
+    hint.className='status';
+    hint.textContent = BACKEND_URL
+      ? 'Click a thumbnail, then click existing text on the page to change it. Replacements reuse the PDF\'s real font where possible.'
+      : 'Edit Text needs a backend configured (BACKEND_URL in app.js) — see /backend.';
     toolbar.appendChild(hint);
   }
   if (state.tool.id === 'remove' || state.tool.id === 'extract'){
@@ -231,45 +239,15 @@ async function renderThumbs(){
   }
 }
 
-// --- Font detection: map the PDF's actual font to the closest pdf-lib standard font ---
-function classifyFont(pdfFontObj, fontNameId){
-  const name = (pdfFontObj && pdfFontObj.name) ? pdfFontObj.name : (fontNameId || '');
-  const lower = name.toLowerCase();
-  const bold = !!(pdfFontObj && pdfFontObj.bold) || lower.includes('bold');
-  const italic = !!(pdfFontObj && pdfFontObj.italic) || lower.includes('italic') || lower.includes('oblique');
-  let family = 'helvetica';
-  if (lower.includes('courier') || lower.includes('mono') || lower.includes('consol')) family = 'courier';
-  else if (lower.includes('times') || lower.includes('serif') || lower.includes('georgia') || lower.includes('garamond') || lower.includes('cambria') || lower.includes('minion') || lower.includes('book')) family = 'times';
-  return { family, bold, italic };
-}
-
-function standardFontKey({family, bold, italic}){
-  if (family === 'courier'){
-    if (bold && italic) return StandardFonts.CourierBoldOblique;
-    if (bold) return StandardFonts.CourierBold;
-    if (italic) return StandardFonts.CourierOblique;
-    return StandardFonts.Courier;
-  }
-  if (family === 'times'){
-    if (bold && italic) return StandardFonts.TimesRomanBoldItalic;
-    if (bold) return StandardFonts.TimesRomanBold;
-    if (italic) return StandardFonts.TimesRomanItalic;
-    return StandardFonts.TimesRoman;
-  }
-  if (bold && italic) return StandardFonts.HelveticaBoldOblique;
-  if (bold) return StandardFonts.HelveticaBold;
-  if (italic) return StandardFonts.HelveticaOblique;
-  return StandardFonts.Helvetica;
-}
-
-async function getEmbeddedFont(key){
-  if (!state.fontEmbeds[key]) state.fontEmbeds[key] = await state.pdfDoc.embedFont(key);
-  return state.fontEmbeds[key];
-}
-
-// --- Edit Text tool: click existing text runs and change them in place ---
+// --- Edit Text tool: click existing text runs (from the backend) and change them in place ---
 async function openEditTextEditor(pos){
+  if (!BACKEND_URL){
+    $('workspaceStatus').textContent = 'Edit Text needs a backend configured (BACKEND_URL in app.js).';
+    return;
+  }
   const origIdx = state.pageOrder[pos];
+
+  // render the visual canvas locally (fast, no round trip)
   const bytes = await state.pdfDoc.save();
   const pjsDoc = await pdfjsLib.getDocument({data:bytes}).promise;
   const pjsPage = await pjsDoc.getPage(origIdx+1);
@@ -288,56 +266,58 @@ async function openEditTextEditor(pos){
   $('editorCanvasWrap').classList.remove('hidden');
   $('editorCanvasWrap').scrollIntoView({behavior:'smooth'});
 
-  if (!state.edits[origIdx]) state.edits[origIdx] = [];
+  // fetch the real text spans (position/font/size/color) from the backend
+  $('workspaceStatus').textContent = 'Reading page text...';
+  const form = new FormData();
+  form.append('file', state.files[0]);
+  form.append('page', origIdx);
+  let inspectResult;
+  try{
+    const res = await fetch(`${BACKEND_URL}/api/inspect`, { method:'POST', body: form });
+    if (!res.ok) throw new Error(`backend returned ${res.status}`);
+    inspectResult = await res.json();
+  } catch(err){
+    $('workspaceStatus').textContent = 'Could not reach backend: ' + err.message;
+    return;
+  }
+  $('workspaceStatus').textContent = '';
+
+  const pxPerPt = viewport.width / inspectResult.width; // == pdf.js scale, unless the page is rotated
+  if (!state.edits[origIdx]) state.edits[origIdx] = {};
   const existingEdits = state.edits[origIdx];
 
-  const content = await pjsPage.getTextContent();
-  content.items.forEach((item, i)=>{
-    if (!item.str || !item.str.trim()) return;
-    const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-    const fontHeightPx = Math.hypot(tx[2], tx[3]);
-    const left = tx[4];
-    const top = tx[5] - fontHeightPx;
+  inspectResult.spans.forEach(span=>{
+    const [x0,y0,x1,y1] = span.bbox;
+    const span_el = document.createElement('span');
+    span_el.contentEditable = 'true';
+    const already = existingEdits[span.id];
+    span_el.textContent = already ? already.newText : span.text;
+    if (already) span_el.classList.add('edited');
+    span_el.style.left = (x0*pxPerPt)+'px';
+    span_el.style.top = (y0*pxPerPt)+'px';
+    span_el.style.width = ((x1-x0)*pxPerPt)+'px';
+    span_el.style.height = ((y1-y0)*pxPerPt)+'px';
+    span_el.style.fontSize = (span.size*pxPerPt)+'px';
+    span_el.style.lineHeight = ((y1-y0)*pxPerPt)+'px';
 
-    // resolve the PDF's actual font object for this run so we can match weight/style
-    let pdfFontObj = null;
-    try { pdfFontObj = pjsPage.commonObjs.get(item.fontName); } catch(e) { /* not resolved yet, fall back to id */ }
-    const fontStyle = classifyFont(pdfFontObj, item.fontName);
-
-    const span = document.createElement('span');
-    span.contentEditable = 'true';
-    span.textContent = item.str;
-    span.style.left = left+'px';
-    span.style.top = top+'px';
-    span.style.fontSize = fontHeightPx+'px';
-    span.style.lineHeight = fontHeightPx+'px';
-    span.style.fontWeight = fontStyle.bold ? 'bold' : 'normal';
-    span.style.fontStyle = fontStyle.italic ? 'italic' : 'normal';
-    span.style.fontFamily = fontStyle.family === 'courier' ? 'monospace' : (fontStyle.family === 'times' ? 'serif' : 'sans-serif');
-
-    // original position/size in PDF points, needed to bake the edit into the page later
-    const pdfFontSize = Math.hypot(item.transform[0], item.transform[1]);
-    const meta = { runId:i, origStr:item.str, pdfX:item.transform[4], pdfY:item.transform[5], pdfFontSize, pdfWidth: item.width, fontStyle };
-
-    const already = existingEdits.find(e=> e.runId===i);
-    if (already){ span.textContent = already.newStr; span.classList.add('edited'); }
-
-    span.addEventListener('blur', ()=>{
-      const val = span.textContent;
-      const idxExisting = existingEdits.findIndex(e=> e.runId===i);
-      if (val === item.str){
-        if (idxExisting>-1) existingEdits.splice(idxExisting,1);
-        span.classList.remove('edited');
+    span_el.addEventListener('blur', ()=>{
+      const val = span_el.textContent;
+      if (val === span.text){
+        delete existingEdits[span.id];
+        span_el.classList.remove('edited');
       } else {
-        span.classList.add('edited');
-        const rec = { ...meta, newStr: val };
-        if (idxExisting>-1) existingEdits[idxExisting] = rec; else existingEdits.push(rec);
+        span_el.classList.add('edited');
+        existingEdits[span.id] = {
+          page: origIdx, bbox: span.bbox, newText: val,
+          font: span.font, size: span.size, color: span.color, flags: span.flags
+        };
       }
     });
 
-    layer.appendChild(span);
+    layer.appendChild(span_el);
   });
 }
+
 
 // --- Add Text tool: click-to-place on a single page ---
 async function openTextEditor(pos){
@@ -362,7 +342,7 @@ async function openTextEditor(pos){
     const ctx = canvas.getContext('2d');
     ctx.putImageData(baseImage,0,0);
     state.texts[origIdx].forEach(t=>{
-      ctx.fillStyle = '#e5322d'; ctx.font = '20px sans-serif';
+      ctx.fillStyle = '#000000'; ctx.font = '20px sans-serif';
       ctx.fillText(t.text, t.x, t.y);
     });
   }
@@ -469,30 +449,26 @@ async function doAddText(){
     const page = state.pdfDoc.getPage(parseInt(origIdx));
     const pageHeight = page.getHeight();
     items.forEach(t=>{
-      page.drawText(t.text, { x: t.x/t.scale, y: pageHeight - t.y/t.scale, size: 14, color: rgb(0.9,0.2,0.18) });
+      page.drawText(t.text, { x: t.x/t.scale, y: pageHeight - t.y/t.scale, size: 14, color: rgb(0,0,0) });
     });
   });
   return copyOrderTo(state.pageOrder);
 }
 
 async function doEditText(){
-  for (const [origIdx, runs] of Object.entries(state.edits)){
-    if (!runs.length) continue;
-    const page = state.pdfDoc.getPage(parseInt(origIdx));
-    for (const r of runs){
-      const font = await getEmbeddedFont(standardFontKey(r.fontStyle || {family:'helvetica', bold:false, italic:false}));
-      const padding = r.pdfFontSize*0.15;
-      page.drawRectangle({
-        x: r.pdfX - padding,
-        y: r.pdfY - padding,
-        width: r.pdfWidth + padding*2,
-        height: r.pdfFontSize + padding*2,
-        color: rgb(1,1,1)
-      });
-      page.drawText(r.newStr, { x: r.pdfX, y: r.pdfY, size: r.pdfFontSize, font, color: rgb(0,0,0) });
-    }
-  }
-  return copyOrderTo(state.pageOrder);
+  const flatEdits = [];
+  Object.values(state.edits).forEach(pageEdits=>{
+    Object.values(pageEdits).forEach(e=> flatEdits.push(e));
+  });
+  if (!flatEdits.length) throw new Error('No text was changed.');
+
+  const form = new FormData();
+  form.append('file', state.files[0]);
+  form.append('edits', JSON.stringify(flatEdits));
+  const res = await fetch(`${BACKEND_URL}/api/apply-edits`, { method:'POST', body: form });
+  if (!res.ok) throw new Error(`backend returned ${res.status}`);
+  const blob = await res.blob();
+  return new Uint8Array(await blob.arrayBuffer());
 }
 
 // ---------- Result ----------
