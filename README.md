@@ -54,14 +54,6 @@ Every other tool (merge, split, rotate, page numbers, etc.) stays fully client-s
 - [pdf.js](https://mozilla.github.io/pdf.js/) — page rendering/thumbnails
 - No build step, no dependencies to install — plain HTML/CSS/JS, libraries loaded from CDN
 
-## Deploy the frontend to GitHub Pages
-
-1. Create a new GitHub repo (or use an existing one).
-2. Add `index.html`, `style.css`, and `app.js` to the repo root (leave `backend/` out, or keep it in the repo but it won't be served by Pages — it's a separate deployment).
-3. Push to GitHub.
-4. Go to **Settings → Pages**, set source to the branch/root you pushed to.
-5. Your app will be live at `https://<username>.github.io/<repo>/`.
-
 ## Local use
 
 Just open `index.html` in a browser — no server required.
