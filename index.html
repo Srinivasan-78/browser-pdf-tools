@@ -2,357 +2,469 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>PDF Editor</title>
+<title>PDF Tools</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-:root{--bg:#0f1115;--panel:#171a21;--accent:#5b8cff;--text:#e6e8ee;--muted:#8a8f9c;--border:#2a2e38}
+:root{--red:#e5322d;--red-dark:#c72a26;--bg:#f4f5f7;--panel:#ffffff;--text:#2b2f38;--muted:#7a7f8a;--border:#e3e5e9}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,sans-serif}
-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px}
-header h1{font-size:16px;margin:0;font-weight:600}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--panel)}
-button{background:#232733;color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px}
-button:hover{background:#2b3040}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button:disabled{opacity:.4;cursor:not-allowed}
-input[type=file]{color:var(--muted)}
-#dropzone{margin:24px;border:2px dashed var(--border);border-radius:10px;padding:60px;text-align:center;color:var(--muted)}
-#dropzone.drag{border-color:var(--accent);color:var(--text)}
-#pages{display:flex;flex-wrap:wrap;gap:16px;padding:24px}
-.page{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;position:relative;cursor:grab}
-.page.dragging{opacity:.4}
-.page canvas{display:block;max-width:220px;border-radius:4px}
-.page .idx{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px;font-size:11px}
-.page .actions{display:flex;gap:4px;margin-top:6px;justify-content:center}
-.page .actions button{padding:4px 8px;font-size:11px}
-.hidden{display:none}
-.status{color:var(--muted);font-size:12px;padding:0 24px}
-#editorOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100}
-#editorPanel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:95vw;max-height:95vh;display:flex;flex-direction:column;gap:10px}
-#editorToolbar{display:flex;gap:8px;align-items:center}
-#editorToolbar button.active{background:var(--accent);border-color:var(--accent);color:#fff}
-#editorCanvasWrap{overflow:auto;border:1px solid var(--border);max-height:75vh}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;gap:12px}
+header h1{font-size:18px;margin:0;font-weight:700;color:var(--red)}
+header .back{display:none;cursor:pointer;color:var(--muted);font-size:14px}
+header .back.show{display:inline}
+main{max-width:1100px;margin:0 auto;padding:32px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
+.tool-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:22px 16px;text-align:center;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.tool-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.08);transform:translateY(-2px)}
+.tool-card .emoji{font-size:30px;margin-bottom:10px}
+.tool-card .name{font-weight:600;font-size:14px}
+.tool-card .desc{color:var(--muted);font-size:12px;margin-top:4px}
+.screen{display:none}
+.screen.active{display:block}
+#dropzone{border:2px dashed var(--border);border-radius:10px;padding:60px 20px;text-align:center;color:var(--muted);background:var(--panel);cursor:pointer}
+#dropzone.drag{border-color:var(--red);color:var(--text)}
+#dropzone input{display:none}
+.btn{background:var(--red);color:#fff;border:none;padding:12px 26px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--red-dark)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn.small{padding:6px 12px;font-size:12px}
+.toolbar-row{display:flex;gap:10px;align-items:center;margin:18px 0;flex-wrap:wrap}
+#thumbs{display:flex;flex-wrap:wrap;gap:14px;margin-top:20px}
+.thumb{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center;position:relative;cursor:grab;user-select:none}
+.thumb.dragging{opacity:.4}
+.thumb.removed{opacity:.3}
+.thumb canvas{display:block;max-width:150px;border-radius:4px;border:1px solid var(--border)}
+.thumb .idx{font-size:11px;color:var(--muted);margin-top:6px}
+.thumb .mark{position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px}
+.thumb .mini-actions{display:flex;gap:4px;justify-content:center;margin-top:6px}
+.status{color:var(--muted);font-size:13px;margin-top:10px}
+.result-box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:40px;text-align:center}
+#editorCanvasWrap{overflow:auto;border:1px solid var(--border);max-height:70vh;margin-top:16px;background:var(--panel)}
 #editorCanvas{display:block;cursor:crosshair}
-#editorColor{width:32px;height:32px;padding:0;border:none;background:none}
+.hidden{display:none}
+.file-list{list-style:none;padding:0;margin:16px 0}
+.file-list li{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;cursor:grab}
+.file-list li.dragging{opacity:.4}
 </style>
 </head>
 <body>
 <header>
-  <h1>PDF Editor</h1>
-  <span class="status" id="status"></span>
+  <span class="back" id="backBtn">&larr; Tools</span>
+  <h1 id="pageTitle">PDF Tools</h1>
 </header>
-<div class="toolbar">
-  <input type="file" id="fileInput" accept="application/pdf" multiple>
-  <button id="mergeAppendBtn" disabled>Append PDF(s)</button>
-  <button id="addTextBtn" disabled>Add Text to Page</button>
-  <button id="rotateAllBtn" disabled>Rotate All 90°</button>
-  <button id="downloadBtn" class="primary" disabled>Download PDF</button>
-</div>
-<div id="dropzone">Drop a PDF here, or use the file picker above</div>
-<div id="pages"></div>
+<main>
 
-<div id="editorOverlay" class="hidden">
-  <div id="editorPanel">
-    <div id="editorToolbar">
-      <button id="toolText" data-tool="text">Text</button>
-      <button id="toolDraw" data-tool="draw">Draw</button>
-      <input type="color" id="editorColor" value="#ff3b3b">
-      <label style="font-size:12px;color:var(--muted)">Size <input type="range" id="editorSize" min="1" max="40" value="4"></label>
-      <button id="editorUndo">Undo</button>
-      <button id="editorClose">Cancel</button>
-      <button id="editorApply" class="primary">Apply</button>
+  <section class="screen active" id="screen-home">
+    <div class="grid" id="toolGrid"></div>
+  </section>
+
+  <section class="screen" id="screen-upload">
+    <div id="dropzone">
+      <p id="dropzoneLabel">Drop PDF file(s) here, or click to choose</p>
+      <input type="file" id="fileInput" accept="application/pdf">
     </div>
-    <div id="editorCanvasWrap"><canvas id="editorCanvas"></canvas></div>
-  </div>
-</div>
+    <p class="status" id="uploadStatus"></p>
+  </section>
+
+  <section class="screen" id="screen-workspace">
+    <div class="toolbar-row" id="workspaceToolbar"></div>
+    <div id="thumbs"></div>
+    <ul class="file-list hidden" id="fileList"></ul>
+    <div id="editorCanvasWrap" class="hidden"><canvas id="editorCanvas"></canvas></div>
+    <div class="toolbar-row" style="margin-top:24px">
+      <button class="btn" id="processBtn">Process</button>
+    </div>
+    <p class="status" id="workspaceStatus"></p>
+  </section>
+
+  <section class="screen" id="screen-result">
+    <div class="result-box">
+      <p id="resultText">Done!</p>
+      <button class="btn" id="downloadBtn">Download</button>
+      <br><br>
+      <button class="btn secondary small" id="startOverBtn">Start over</button>
+    </div>
+  </section>
+
+</main>
 
 <script>
-const { PDFDocument, degrees } = PDFLib;
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js".replace('pdf.min.js','pdf.worker.min.js');
+const { PDFDocument, degrees, rgb } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-let pdfDoc = null;       // pdf-lib document (source of truth for editing/export)
-let pageOrder = [];      // array of original page indices, current order
-let rotations = {};      // idx -> extra rotation degrees added by user
 const $ = id => document.getElementById(id);
-const statusEl = $('status');
-const pagesEl = $('pages');
-const dropzone = $('dropzone');
 
-function setStatus(msg){ statusEl.textContent = msg; }
-function enableToolbar(on){
-  ['mergeAppendBtn','addTextBtn','rotateAllBtn','downloadBtn'].forEach(id=>$(id).disabled=!on);
+const TOOLS = [
+  { id:'merge',    name:'Merge PDF',        emoji:'🧩', desc:'Combine multiple PDFs',        multi:true },
+  { id:'split',     name:'Split PDF',        emoji:'✂️', desc:'Each page as its own file',     multi:false },
+  { id:'remove',    name:'Remove Pages',     emoji:'🗑️', desc:"Delete pages you don't need",  multi:false },
+  { id:'extract',   name:'Extract Pages',    emoji:'📑', desc:'Keep only selected pages',      multi:false },
+  { id:'reorder',   name:'Reorder Pages',    emoji:'🔀', desc:'Drag pages into a new order',   multi:false },
+  { id:'rotate',    name:'Rotate PDF',       emoji:'🔄', desc:'Rotate one or all pages',       multi:false },
+  { id:'numbers',   name:'Add Page Numbers', emoji:'🔢', desc:'Stamp page numbers',            multi:false },
+  { id:'text',      name:'Add Text',         emoji:'✏️', desc:'Click a page to add text',      multi:false },
+];
+
+let state = {};
+
+function resetState(){
+  state = { tool:null, files:[], fileBytes:[], pdfDoc:null, pageOrder:[], removedSet:new Set(), keepSet:new Set(), rotationDelta:{}, texts:{} };
+}
+resetState();
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+  $('backBtn').classList.toggle('show', id!=='screen-home');
 }
 
-async function loadPdfFromBytes(bytes){
-  pdfDoc = await PDFDocument.load(bytes);
-  pageOrder = pdfDoc.getPages().map((_,i)=>i);
-  rotations = {};
-  dropzone.classList.add('hidden');
-  enableToolbar(true);
-  await renderThumbnails();
-}
-
-async function renderThumbnails(){
-  pagesEl.innerHTML = '';
-  const bytes = await pdfDoc.save();
-  const loadingTask = pdfjsLib.getDocument({data: bytes});
-  const pdfjsDoc = await loadingTask.promise;
-  for (let i=0;i<pageOrder.length;i++){
-    const origIdx = pageOrder[i];
-    const pjsPage = await pdfjsDoc.getPage(origIdx+1);
-    const viewport = pjsPage.getViewport({scale:0.5});
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width; canvas.height = viewport.height;
-    await pjsPage.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'page';
-    wrap.draggable = true;
-    wrap.dataset.pos = i;
-    wrap.innerHTML = `<div class="idx">${i+1}</div>`;
-    wrap.appendChild(canvas);
-    const actions = document.createElement('div');
-    actions.className = 'actions';
-    actions.innerHTML = `<button data-act="edit">Edit</button><button data-act="rotate">⟳</button><button data-act="delete">✕</button>`;
-    wrap.appendChild(actions);
-    pagesEl.appendChild(wrap);
-  }
-  setStatus(`${pageOrder.length} page(s)`);
-  attachPageEvents();
-}
-
-function attachPageEvents(){
-  const cards = [...pagesEl.children];
-  cards.forEach(card=>{
-    card.addEventListener('dragstart', e=>{ card.classList.add('dragging'); e.dataTransfer.setData('text/plain', card.dataset.pos); });
-    card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
-    card.addEventListener('dragover', e=> e.preventDefault());
-    card.addEventListener('drop', e=>{
-      e.preventDefault();
-      const from = parseInt(e.dataTransfer.getData('text/plain'));
-      const to = parseInt(card.dataset.pos);
-      if (from===to) return;
-      const moved = pageOrder.splice(from,1)[0];
-      pageOrder.splice(to,0,moved);
-      renderThumbnails();
-    });
-    card.querySelector('[data-act="delete"]').addEventListener('click', ()=>{
-      const pos = parseInt(card.dataset.pos);
-      pageOrder.splice(pos,1);
-      renderThumbnails();
-    });
-    card.querySelector('[data-act="edit"]').addEventListener('click', ()=>{
-      const pos = parseInt(card.dataset.pos);
-      openEditor(pos);
-    });
-    card.querySelector('[data-act="rotate"]').addEventListener('click', async ()=>{
-      const pos = parseInt(card.dataset.pos);
-      const origIdx = pageOrder[pos];
-      const page = pdfDoc.getPage(origIdx);
-      const current = page.getRotation().angle;
-      page.setRotation(degrees((current+90)%360));
-      await renderThumbnails();
-    });
+// ---------- Home ----------
+function buildHome(){
+  const grid = $('toolGrid');
+  grid.innerHTML='';
+  TOOLS.forEach(t=>{
+    const card = document.createElement('div');
+    card.className='tool-card';
+    card.innerHTML = `<div class="emoji">${t.emoji}</div><div class="name">${t.name}</div><div class="desc">${t.desc}</div>`;
+    card.addEventListener('click', ()=> openTool(t.id));
+    grid.appendChild(card);
   });
 }
+buildHome();
 
-$('fileInput').addEventListener('change', async e=>{
-  const files = [...e.target.files];
-  if (!files.length) return;
-  if (!pdfDoc){
-    const bytes = await files[0].arrayBuffer();
-    await loadPdfFromBytes(bytes);
-    files.shift();
-  }
-  for (const f of files) await appendFile(f);
-});
+$('backBtn').addEventListener('click', ()=>{ resetState(); $('pageTitle').textContent='PDF Tools'; showScreen('screen-home'); });
 
+function openTool(id){
+  resetState();
+  state.tool = TOOLS.find(t=>t.id===id);
+  $('pageTitle').textContent = state.tool.name;
+  $('fileInput').multiple = !!state.tool.multi;
+  $('fileInput').value = '';
+  $('dropzoneLabel').textContent = state.tool.multi ? 'Drop 2+ PDF files here, or click to choose' : 'Drop a PDF file here, or click to choose';
+  $('uploadStatus').textContent = '';
+  showScreen('screen-upload');
+}
+
+// ---------- Upload ----------
+const dropzone = $('dropzone');
+dropzone.addEventListener('click', ()=> $('fileInput').click());
 ['dragenter','dragover'].forEach(ev=> dropzone.addEventListener(ev, e=>{e.preventDefault(); dropzone.classList.add('drag');}));
 ['dragleave','drop'].forEach(ev=> dropzone.addEventListener(ev, e=>{e.preventDefault(); dropzone.classList.remove('drag');}));
-dropzone.addEventListener('drop', async e=>{
-  const files = [...e.dataTransfer.files].filter(f=>f.type==='application/pdf');
+dropzone.addEventListener('drop', e=> handleFiles([...e.dataTransfer.files].filter(f=>f.type==='application/pdf')));
+$('fileInput').addEventListener('change', e=> handleFiles([...e.target.files]));
+
+async function handleFiles(files){
   if (!files.length) return;
-  const bytes = await files[0].arrayBuffer();
-  await loadPdfFromBytes(bytes);
-  for (const f of files.slice(1)) await appendFile(f);
-});
-
-async function appendFile(file){
-  const bytes = await file.arrayBuffer();
-  const src = await PDFDocument.load(bytes);
-  const copiedIndices = src.getPages().map((_,i)=>i);
-  const copied = await pdfDoc.copyPages(src, copiedIndices);
-  copied.forEach(p=>{
-    const newIdx = pdfDoc.getPageCount();
-    pdfDoc.addPage(p);
-    pageOrder.push(newIdx);
-  });
-  await renderThumbnails();
+  if (!state.tool.multi) files = files.slice(0,1);
+  state.files = files;
+  $('uploadStatus').textContent = `Loading ${files.length} file(s)...`;
+  try{
+    if (state.tool.multi){
+      state.fileBytes = await Promise.all(files.map(f=>f.arrayBuffer()));
+    } else {
+      const bytes = await files[0].arrayBuffer();
+      state.pdfDoc = await PDFDocument.load(bytes);
+      state.pageOrder = state.pdfDoc.getPages().map((_,i)=>i);
+    }
+    await enterWorkspace();
+  } catch(err){
+    $('uploadStatus').textContent = 'Could not read that PDF: ' + err.message;
+  }
 }
 
-$('mergeAppendBtn').addEventListener('click', ()=>{
-  const inp = document.createElement('input');
-  inp.type='file'; inp.accept='application/pdf'; inp.multiple=true;
-  inp.onchange = async ()=>{ for (const f of inp.files) await appendFile(f); };
-  inp.click();
-});
+// ---------- Workspace ----------
+async function enterWorkspace(){
+  showScreen('screen-workspace');
+  $('workspaceStatus').textContent = '';
+  $('thumbs').innerHTML = '';
+  $('fileList').classList.add('hidden');
+  $('editorCanvasWrap').classList.add('hidden');
+  $('processBtn').textContent = 'Process';
+  const toolbar = $('workspaceToolbar');
+  toolbar.innerHTML = '';
 
-$('rotateAllBtn').addEventListener('click', async ()=>{
-  pageOrder.forEach(origIdx=>{
-    const page = pdfDoc.getPage(origIdx);
-    const current = page.getRotation().angle;
-    page.setRotation(degrees((current+90)%360));
-  });
-  await renderThumbnails();
-});
+  if (state.tool.id === 'merge'){
+    buildFileList();
+    return;
+  }
 
-$('addTextBtn').addEventListener('click', async ()=>{
-  const pageNumStr = prompt(`Add text to which page? (1-${pageOrder.length})`, '1');
-  const pageNum = parseInt(pageNumStr);
-  if (!pageNum || pageNum<1 || pageNum>pageOrder.length) return;
-  const text = prompt('Text to add:');
-  if (!text) return;
-  const xStr = prompt('X position (points from left):', '50');
-  const yStr = prompt('Y position (points from bottom):', '50');
-  const origIdx = pageOrder[pageNum-1];
-  const page = pdfDoc.getPage(origIdx);
-  page.drawText(text, { x: parseFloat(xStr)||50, y: parseFloat(yStr)||50, size: 18 });
-  await renderThumbnails();
-});
+  await renderThumbs();
 
-// ---- Per-page manual editor ----
-let editorState = null; // {pos, origIdx, scale, tool, color, size, strokes, texts, drawing, currentPath, ctx}
-
-function hexToRgb01(hex){
-  const n = parseInt(hex.slice(1),16);
-  return { r: ((n>>16)&255)/255, g: ((n>>8)&255)/255, b: (n&255)/255 };
+  if (state.tool.id === 'rotate'){
+    const btn = document.createElement('button');
+    btn.className='btn secondary small'; btn.textContent='Rotate all 90°';
+    btn.onclick = ()=>{ state.pageOrder.forEach(i=> state.rotationDelta[i]=((state.rotationDelta[i]||0)+90)%360); renderThumbs(); };
+    toolbar.appendChild(btn);
+  }
+  if (state.tool.id === 'text'){
+    const hint = document.createElement('span');
+    hint.className='status'; hint.textContent = 'Click a thumbnail to open it and add text.';
+    toolbar.appendChild(hint);
+  }
+  if (state.tool.id === 'remove' || state.tool.id === 'extract'){
+    const hint = document.createElement('span');
+    hint.className='status';
+    hint.textContent = state.tool.id==='remove' ? 'Click pages to mark for removal.' : 'Click pages to select which to keep (all kept by default).';
+    toolbar.appendChild(hint);
+  }
 }
 
-async function openEditor(pos){
-  const origIdx = pageOrder[pos];
-  const bytes = await pdfDoc.save();
-  const pjsDoc = await pdfjsLib.getDocument({data: bytes}).promise;
+// --- Merge: file list with drag reorder ---
+function buildFileList(){
+  const list = $('fileList');
+  list.classList.remove('hidden');
+  list.innerHTML = '';
+  state.files.forEach((f,i)=>{
+    const li = document.createElement('li');
+    li.draggable = true;
+    li.dataset.pos = i;
+    li.innerHTML = `<span>${f.name}</span><span style="color:var(--muted);font-size:12px">drag to reorder</span>`;
+    li.addEventListener('dragstart', ()=> li.classList.add('dragging'));
+    li.addEventListener('dragend', ()=> li.classList.remove('dragging'));
+    li.addEventListener('dragover', e=> e.preventDefault());
+    li.addEventListener('drop', e=>{
+      e.preventDefault();
+      const dragEl = list.querySelector('.dragging');
+      if (!dragEl) return;
+      const from = parseInt(dragEl.dataset.pos);
+      const to = i;
+      if (from===to) return;
+      const f2 = state.files.splice(from,1)[0]; state.files.splice(to,0,f2);
+      const b2 = state.fileBytes.splice(from,1)[0]; state.fileBytes.splice(to,0,b2);
+      buildFileList();
+    });
+    list.appendChild(li);
+  });
+}
+
+// --- thumbnail grid for single-file tools ---
+async function renderThumbs(){
+  const wrap = $('thumbs');
+  wrap.innerHTML = '';
+  const bytes = await state.pdfDoc.save();
+  const pjsDoc = await pdfjsLib.getDocument({data:bytes}).promise;
+
+  if (state.tool.id === 'extract' && state.keepSet.size === 0){
+    state.pageOrder.forEach(i=> state.keepSet.add(i)); // default: keep all until user deselects
+  }
+
+  for (let pos=0; pos<state.pageOrder.length; pos++){
+    const origIdx = state.pageOrder[pos];
+    const pjsPage = await pjsDoc.getPage(origIdx+1);
+    const viewport = pjsPage.getViewport({scale:0.4});
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await pjsPage.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+
+    const card = document.createElement('div');
+    card.className = 'thumb';
+    card.draggable = (state.tool.id==='reorder');
+    card.dataset.pos = pos;
+    if (state.tool.id==='remove' && state.removedSet.has(origIdx)) card.classList.add('removed');
+    card.appendChild(canvas);
+    const idxLbl = document.createElement('div');
+    idxLbl.className='idx'; idxLbl.textContent = `Page ${pos+1}`;
+    card.appendChild(idxLbl);
+
+    if (state.tool.id==='remove'){
+      const mark = document.createElement('div'); mark.className='mark';
+      mark.textContent = state.removedSet.has(origIdx) ? '✕' : '';
+      card.appendChild(mark);
+      card.addEventListener('click', ()=>{
+        if (state.removedSet.has(origIdx)) state.removedSet.delete(origIdx); else state.removedSet.add(origIdx);
+        renderThumbs();
+      });
+    }
+    if (state.tool.id==='extract'){
+      const mark = document.createElement('div'); mark.className='mark';
+      mark.textContent = state.keepSet.has(origIdx) ? '✓' : '';
+      card.appendChild(mark);
+      card.addEventListener('click', ()=>{
+        if (state.keepSet.has(origIdx)) state.keepSet.delete(origIdx); else state.keepSet.add(origIdx);
+        renderThumbs();
+      });
+    }
+    if (state.tool.id==='rotate'){
+      const actions = document.createElement('div'); actions.className='mini-actions';
+      const rb = document.createElement('button'); rb.className='btn small secondary'; rb.textContent='⟳';
+      rb.onclick=(e)=>{ e.stopPropagation(); state.rotationDelta[origIdx]=((state.rotationDelta[origIdx]||0)+90)%360; renderThumbs(); };
+      actions.appendChild(rb); card.appendChild(actions);
+    }
+    if (state.tool.id==='text'){
+      card.addEventListener('click', ()=> openTextEditor(pos));
+    }
+    if (state.tool.id==='reorder'){
+      card.addEventListener('dragstart', ()=> card.classList.add('dragging'));
+      card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
+      card.addEventListener('dragover', e=> e.preventDefault());
+      card.addEventListener('drop', e=>{
+        e.preventDefault();
+        const dragEl = wrap.querySelector('.dragging');
+        if (!dragEl) return;
+        const from = parseInt(dragEl.dataset.pos);
+        const to = pos;
+        if (from===to) return;
+        const moved = state.pageOrder.splice(from,1)[0];
+        state.pageOrder.splice(to,0,moved);
+        renderThumbs();
+      });
+    }
+    wrap.appendChild(card);
+  }
+}
+
+// --- Text tool: click-to-place on a single page ---
+async function openTextEditor(pos){
+  const origIdx = state.pageOrder[pos];
+  const bytes = await state.pdfDoc.save();
+  const pjsDoc = await pdfjsLib.getDocument({data:bytes}).promise;
   const pjsPage = await pjsDoc.getPage(origIdx+1);
-  const scale = 1.5;
+  const scale = 1.4;
   const viewport = pjsPage.getViewport({scale});
   const canvas = $('editorCanvas');
   canvas.width = viewport.width; canvas.height = viewport.height;
-  await pjsPage.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+  canvas.style.width = viewport.width + 'px';
+  canvas.style.height = viewport.height + 'px';
+  await pjsPage.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+  $('editorCanvasWrap').classList.remove('hidden');
+  $('editorCanvasWrap').scrollIntoView({behavior:'smooth'});
 
-  editorState = { pos, origIdx, scale, tool:'text', color:$('editorColor').value, size:parseInt($('editorSize').value), strokes:[], texts:[], drawing:false, currentPath:null, baseImage: canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height) };
-  $('editorOverlay').classList.remove('hidden');
-  setTool('text');
-}
+  if (!state.texts[origIdx]) state.texts[origIdx] = [];
+  const baseImage = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height);
 
-function setTool(tool){
-  editorState.tool = tool;
-  $('toolText').classList.toggle('active', tool==='text');
-  $('toolDraw').classList.toggle('active', tool==='draw');
-}
-$('toolText').addEventListener('click', ()=> setTool('text'));
-$('toolDraw').addEventListener('click', ()=> setTool('draw'));
-$('editorColor').addEventListener('change', e=> editorState.color = e.target.value);
-$('editorSize').addEventListener('change', e=> editorState.size = parseInt(e.target.value));
-$('editorClose').addEventListener('click', ()=> $('editorOverlay').classList.add('hidden'));
-
-function redrawEditorCanvas(){
-  const canvas = $('editorCanvas');
-  const ctx = canvas.getContext('2d');
-  ctx.putImageData(editorState.baseImage, 0, 0);
-  editorState.strokes.forEach(s=>{
-    ctx.strokeStyle = s.color; ctx.lineWidth = s.size; ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.beginPath();
-    s.points.forEach(([x,y],i)=> i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
-    ctx.stroke();
-  });
-  editorState.texts.forEach(t=>{
-    ctx.fillStyle = t.color; ctx.font = `${t.size*4}px sans-serif`;
-    ctx.fillText(t.text, t.x, t.y);
-  });
-}
-
-const editorCanvas = $('editorCanvas');
-editorCanvas.addEventListener('mousedown', e=>{
-  if (!editorState) return;
-  const rect = editorCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  if (editorState.tool === 'text'){
-    const text = prompt('Text:');
-    if (text) { editorState.texts.push({x,y,text,color:editorState.color,size:editorState.size}); redrawEditorCanvas(); }
-  } else {
-    editorState.drawing = true;
-    editorState.currentPath = { points:[[x,y]], color:editorState.color, size:editorState.size };
+  function redraw(){
+    const ctx = canvas.getContext('2d');
+    ctx.putImageData(baseImage,0,0);
+    state.texts[origIdx].forEach(t=>{
+      ctx.fillStyle = '#e5322d'; ctx.font = '20px sans-serif';
+      ctx.fillText(t.text, t.x, t.y);
+    });
   }
-});
-editorCanvas.addEventListener('mousemove', e=>{
-  if (!editorState || !editorState.drawing) return;
-  const rect = editorCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left, y = e.clientY - rect.top;
-  editorState.currentPath.points.push([x,y]);
-  redrawEditorCanvas();
-  const ctx = editorCanvas.getContext('2d');
-  ctx.strokeStyle = editorState.currentPath.color; ctx.lineWidth = editorState.currentPath.size; ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.beginPath();
-  editorState.currentPath.points.forEach(([px,py],i)=> i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py));
-  ctx.stroke();
-});
-window.addEventListener('mouseup', ()=>{
-  if (editorState && editorState.drawing){
-    editorState.drawing = false;
-    editorState.strokes.push(editorState.currentPath);
-    editorState.currentPath = null;
+  redraw();
+
+  canvas.onclick = (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX-rect.left) * (canvas.width/rect.width);
+    const y = (e.clientY-rect.top) * (canvas.height/rect.height);
+    const text = prompt('Text to add:');
+    if (!text) return;
+    state.texts[origIdx].push({x,y,text,scale});
+    redraw();
+  };
+}
+
+// ---------- Process ----------
+$('processBtn').addEventListener('click', async ()=>{
+  if (state.tool.id === 'merge' && state.files.length < 2){
+    $('workspaceStatus').textContent = 'Add at least 2 files to merge.';
+    return;
+  }
+  $('workspaceStatus').textContent = 'Processing...';
+  try{
+    let outBytes, filename, mime='application/pdf';
+    switch(state.tool.id){
+      case 'merge': { outBytes = await doMerge(); filename='merged.pdf'; break; }
+      case 'split': { outBytes = await doSplit(); filename='split-pages.zip'; mime='application/zip'; break; }
+      case 'remove': { outBytes = await doKeepExcluding(state.removedSet); filename='removed-pages.pdf'; break; }
+      case 'extract': { outBytes = await doKeepOnly(state.keepSet); filename='extracted-pages.pdf'; break; }
+      case 'reorder': { outBytes = await doReorder(); filename='reordered.pdf'; break; }
+      case 'rotate': { outBytes = await doRotate(); filename='rotated.pdf'; break; }
+      case 'numbers': { outBytes = await doPageNumbers(); filename='numbered.pdf'; break; }
+      case 'text': { outBytes = await doAddText(); filename='edited.pdf'; break; }
+    }
+    showResult(outBytes, filename, mime);
+  } catch(err){
+    $('workspaceStatus').textContent = 'Error: ' + err.message;
   }
 });
 
-$('editorUndo').addEventListener('click', ()=>{
-  if (!editorState) return;
-  if (editorState.texts.length && (!editorState.strokes.length)) editorState.texts.pop();
-  else if (editorState.strokes.length) editorState.strokes.pop();
-  redrawEditorCanvas();
-});
+async function doMerge(){
+  const out = await PDFDocument.create();
+  for (const bytes of state.fileBytes){
+    const src = await PDFDocument.load(bytes);
+    const pages = await out.copyPages(src, src.getPages().map((_,i)=>i));
+    pages.forEach(p=> out.addPage(p));
+  }
+  return out.save();
+}
 
-$('editorApply').addEventListener('click', async ()=>{
-  const { origIdx, scale, texts, strokes } = editorState;
-  const page = pdfDoc.getPage(origIdx);
-  const pageHeight = page.getHeight();
-  texts.forEach(t=>{
-    page.drawText(t.text, {
-      x: t.x/scale,
-      y: pageHeight - t.y/scale,
-      size: t.size,
-      color: PDFLib.rgb(hexToRgb01(t.color).r, hexToRgb01(t.color).g, hexToRgb01(t.color).b)
+async function doSplit(){
+  const zip = new JSZip();
+  const total = state.pdfDoc.getPageCount();
+  for (let i=0;i<total;i++){
+    const single = await PDFDocument.create();
+    const [p] = await single.copyPages(state.pdfDoc, [i]);
+    single.addPage(p);
+    const bytes = await single.save();
+    zip.file(`page-${i+1}.pdf`, bytes);
+  }
+  return zip.generateAsync({type:'uint8array'});
+}
+
+async function copyOrderTo(order){
+  const out = await PDFDocument.create();
+  const pages = await out.copyPages(state.pdfDoc, order);
+  pages.forEach(p=> out.addPage(p));
+  return out.save();
+}
+
+async function doKeepExcluding(excludeSet){
+  return copyOrderTo(state.pageOrder.filter(i=> !excludeSet.has(i)));
+}
+async function doKeepOnly(keepSet){
+  return copyOrderTo(state.pageOrder.filter(i=> keepSet.has(i)));
+}
+async function doReorder(){
+  return copyOrderTo(state.pageOrder);
+}
+
+async function doRotate(){
+  state.pageOrder.forEach(origIdx=>{
+    const delta = state.rotationDelta[origIdx]||0;
+    if (!delta) return;
+    const page = state.pdfDoc.getPage(origIdx);
+    page.setRotation(degrees((page.getRotation().angle + delta) % 360));
+  });
+  return copyOrderTo(state.pageOrder);
+}
+
+async function doPageNumbers(){
+  state.pageOrder.forEach((origIdx,i)=>{
+    const page = state.pdfDoc.getPage(origIdx);
+    const { width } = page.getSize();
+    page.drawText(String(i+1), { x: width/2 - 4, y: 20, size: 12, color: rgb(0,0,0) });
+  });
+  return copyOrderTo(state.pageOrder);
+}
+
+async function doAddText(){
+  Object.entries(state.texts).forEach(([origIdx, items])=>{
+    const page = state.pdfDoc.getPage(parseInt(origIdx));
+    const pageHeight = page.getHeight();
+    items.forEach(t=>{
+      page.drawText(t.text, { x: t.x/t.scale, y: pageHeight - t.y/t.scale, size: 14, color: rgb(0.9,0.2,0.18) });
     });
   });
-  strokes.forEach(s=>{
-    const c = hexToRgb01(s.color);
-    for (let i=1;i<s.points.length;i++){
-      const [x1,y1] = s.points[i-1], [x2,y2] = s.points[i];
-      page.drawLine({
-        start:{x:x1/scale, y: pageHeight - y1/scale},
-        end:{x:x2/scale, y: pageHeight - y2/scale},
-        thickness: s.size/scale,
-        color: PDFLib.rgb(c.r,c.g,c.b)
-      });
-    }
-  });
-  $('editorOverlay').classList.add('hidden');
-  editorState = null;
-  await renderThumbnails();
-});
+  return copyOrderTo(state.pageOrder);
+}
 
-$('downloadBtn').addEventListener('click', async ()=>{
-  // rebuild final doc in the current display order
-  const finalDoc = await PDFDocument.create();
-  const copied = await finalDoc.copyPages(pdfDoc, pageOrder);
-  copied.forEach(p=>finalDoc.addPage(p));
-  const bytes = await finalDoc.save();
-  const blob = new Blob([bytes], {type:'application/pdf'});
+// ---------- Result ----------
+function showResult(bytes, filename, mime){
+  const blob = new Blob([bytes], {type:mime});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'edited.pdf'; a.click();
-  URL.revokeObjectURL(url);
-});
+  $('resultText').textContent = `Your file is ready: ${filename}`;
+  const dl = $('downloadBtn');
+  dl.onclick = ()=>{
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+  };
+  showScreen('screen-result');
+}
+
+$('startOverBtn').addEventListener('click', ()=>{ resetState(); $('pageTitle').textContent='PDF Tools'; showScreen('screen-home'); });
 </script>
 </body>
 </html>
