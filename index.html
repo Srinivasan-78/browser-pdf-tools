@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PDF Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--accent:#5b8cff;--text:#e6e8ee;--muted:#8a8f9c;--border:#2a2e38}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,sans-serif}
+header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px}
+header h1{font-size:16px;margin:0;font-weight:600}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--panel)}
+button{background:#232733;color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+button:hover{background:#2b3040}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}
+input[type=file]{color:var(--muted)}
+#dropzone{margin:24px;border:2px dashed var(--border);border-radius:10px;padding:60px;text-align:center;color:var(--muted)}
+#dropzone.drag{border-color:var(--accent);color:var(--text)}
+#pages{display:flex;flex-wrap:wrap;gap:16px;padding:24px}
+.page{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px;position:relative;cursor:grab}
+.page.dragging{opacity:.4}
+.page canvas{display:block;max-width:220px;border-radius:4px}
+.page .idx{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);padding:2px 6px;border-radius:4px;font-size:11px}
+.page .actions{display:flex;gap:4px;margin-top:6px;justify-content:center}
+.page .actions button{padding:4px 8px;font-size:11px}
+.hidden{display:none}
+.status{color:var(--muted);font-size:12px;padding:0 24px}
+</style>
+</head>
+<body>
+<header>
+  <h1>PDF Editor</h1>
+  <span class="status" id="status"></span>
+</header>
+<div class="toolbar">
+  <input type="file" id="fileInput" accept="application/pdf" multiple>
+  <button id="mergeAppendBtn" disabled>Append PDF(s)</button>
+  <button id="addTextBtn" disabled>Add Text to Page</button>
+  <button id="rotateAllBtn" disabled>Rotate All 90°</button>
+  <button id="downloadBtn" class="primary" disabled>Download PDF</button>
+</div>
+<div id="dropzone">Drop a PDF here, or use the file picker above</div>
+<div id="pages"></div>
+
+<script>
+const { PDFDocument, degrees } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js".replace('pdf.min.js','pdf.worker.min.js');
+
+let pdfDoc = null;       // pdf-lib document (source of truth for editing/export)
+let pageOrder = [];      // array of original page indices, current order
+let rotations = {};      // idx -> extra rotation degrees added by user
+const $ = id => document.getElementById(id);
+const statusEl = $('status');
+const pagesEl = $('pages');
+const dropzone = $('dropzone');
+
+function setStatus(msg){ statusEl.textContent = msg; }
+function enableToolbar(on){
+  ['mergeAppendBtn','addTextBtn','rotateAllBtn','downloadBtn'].forEach(id=>$(id).disabled=!on);
+}
+
+async function loadPdfFromBytes(bytes){
+  pdfDoc = await PDFDocument.load(bytes);
+  pageOrder = pdfDoc.getPages().map((_,i)=>i);
+  rotations = {};
+  dropzone.classList.add('hidden');
+  enableToolbar(true);
+  await renderThumbnails();
+}
+
+async function renderThumbnails(){
+  pagesEl.innerHTML = '';
+  const bytes = await pdfDoc.save();
+  const loadingTask = pdfjsLib.getDocument({data: bytes});
+  const pdfjsDoc = await loadingTask.promise;
+  for (let i=0;i<pageOrder.length;i++){
+    const origIdx = pageOrder[i];
+    const pjsPage = await pdfjsDoc.getPage(origIdx+1);
+    const viewport = pjsPage.getViewport({scale:0.5});
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await pjsPage.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'page';
+    wrap.draggable = true;
+    wrap.dataset.pos = i;
+    wrap.innerHTML = `<div class="idx">${i+1}</div>`;
+    wrap.appendChild(canvas);
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    actions.innerHTML = `<button data-act="rotate">⟳</button><button data-act="delete">✕</button>`;
+    wrap.appendChild(actions);
+    pagesEl.appendChild(wrap);
+  }
+  setStatus(`${pageOrder.length} page(s)`);
+  attachPageEvents();
+}
+
+function attachPageEvents(){
+  const cards = [...pagesEl.children];
+  cards.forEach(card=>{
+    card.addEventListener('dragstart', e=>{ card.classList.add('dragging'); e.dataTransfer.setData('text/plain', card.dataset.pos); });
+    card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
+    card.addEventListener('dragover', e=> e.preventDefault());
+    card.addEventListener('drop', e=>{
+      e.preventDefault();
+      const from = parseInt(e.dataTransfer.getData('text/plain'));
+      const to = parseInt(card.dataset.pos);
+      if (from===to) return;
+      const moved = pageOrder.splice(from,1)[0];
+      pageOrder.splice(to,0,moved);
+      renderThumbnails();
+    });
+    card.querySelector('[data-act="delete"]').addEventListener('click', ()=>{
+      const pos = parseInt(card.dataset.pos);
+      pageOrder.splice(pos,1);
+      renderThumbnails();
+    });
+    card.querySelector('[data-act="rotate"]').addEventListener('click', async ()=>{
+      const pos = parseInt(card.dataset.pos);
+      const origIdx = pageOrder[pos];
+      const page = pdfDoc.getPage(origIdx);
+      const current = page.getRotation().angle;
+      page.setRotation(degrees((current+90)%360));
+      await renderThumbnails();
+    });
+  });
+}
+
+$('fileInput').addEventListener('change', async e=>{
+  const files = [...e.target.files];
+  if (!files.length) return;
+  if (!pdfDoc){
+    const bytes = await files[0].arrayBuffer();
+    await loadPdfFromBytes(bytes);
+    files.shift();
+  }
+  for (const f of files) await appendFile(f);
+});
+
+['dragenter','dragover'].forEach(ev=> dropzone.addEventListener(ev, e=>{e.preventDefault(); dropzone.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=> dropzone.addEventListener(ev, e=>{e.preventDefault(); dropzone.classList.remove('drag');}));
+dropzone.addEventListener('drop', async e=>{
+  const files = [...e.dataTransfer.files].filter(f=>f.type==='application/pdf');
+  if (!files.length) return;
+  const bytes = await files[0].arrayBuffer();
+  await loadPdfFromBytes(bytes);
+  for (const f of files.slice(1)) await appendFile(f);
+});
+
+async function appendFile(file){
+  const bytes = await file.arrayBuffer();
+  const src = await PDFDocument.load(bytes);
+  const copiedIndices = src.getPages().map((_,i)=>i);
+  const copied = await pdfDoc.copyPages(src, copiedIndices);
+  copied.forEach(p=>{
+    const newIdx = pdfDoc.getPageCount();
+    pdfDoc.addPage(p);
+    pageOrder.push(newIdx);
+  });
+  await renderThumbnails();
+}
+
+$('mergeAppendBtn').addEventListener('click', ()=>{
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='application/pdf'; inp.multiple=true;
+  inp.onchange = async ()=>{ for (const f of inp.files) await appendFile(f); };
+  inp.click();
+});
+
+$('rotateAllBtn').addEventListener('click', async ()=>{
+  pageOrder.forEach(origIdx=>{
+    const page = pdfDoc.getPage(origIdx);
+    const current = page.getRotation().angle;
+    page.setRotation(degrees((current+90)%360));
+  });
+  await renderThumbnails();
+});
+
+$('addTextBtn').addEventListener('click', async ()=>{
+  const pageNumStr = prompt(`Add text to which page? (1-${pageOrder.length})`, '1');
+  const pageNum = parseInt(pageNumStr);
+  if (!pageNum || pageNum<1 || pageNum>pageOrder.length) return;
+  const text = prompt('Text to add:');
+  if (!text) return;
+  const xStr = prompt('X position (points from left):', '50');
+  const yStr = prompt('Y position (points from bottom):', '50');
+  const origIdx = pageOrder[pageNum-1];
+  const page = pdfDoc.getPage(origIdx);
+  page.drawText(text, { x: parseFloat(xStr)||50, y: parseFloat(yStr)||50, size: 18 });
+  await renderThumbnails();
+});
+
+$('downloadBtn').addEventListener('click', async ()=>{
+  // rebuild final doc in the current display order
+  const finalDoc = await PDFDocument.create();
+  const copied = await finalDoc.copyPages(pdfDoc, pageOrder);
+  copied.forEach(p=>finalDoc.addPage(p));
+  const bytes = await finalDoc.save();
+  const blob = new Blob([bytes], {type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'edited.pdf'; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
