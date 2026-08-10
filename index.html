@@ -28,6 +28,13 @@ input[type=file]{color:var(--muted)}
 .page .actions button{padding:4px 8px;font-size:11px}
 .hidden{display:none}
 .status{color:var(--muted);font-size:12px;padding:0 24px}
+#editorOverlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100}
+#editorPanel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:95vw;max-height:95vh;display:flex;flex-direction:column;gap:10px}
+#editorToolbar{display:flex;gap:8px;align-items:center}
+#editorToolbar button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+#editorCanvasWrap{overflow:auto;border:1px solid var(--border);max-height:75vh}
+#editorCanvas{display:block;cursor:crosshair}
+#editorColor{width:32px;height:32px;padding:0;border:none;background:none}
 </style>
 </head>
 <body>
@@ -44,6 +51,21 @@ input[type=file]{color:var(--muted)}
 </div>
 <div id="dropzone">Drop a PDF here, or use the file picker above</div>
 <div id="pages"></div>
+
+<div id="editorOverlay" class="hidden">
+  <div id="editorPanel">
+    <div id="editorToolbar">
+      <button id="toolText" data-tool="text">Text</button>
+      <button id="toolDraw" data-tool="draw">Draw</button>
+      <input type="color" id="editorColor" value="#ff3b3b">
+      <label style="font-size:12px;color:var(--muted)">Size <input type="range" id="editorSize" min="1" max="40" value="4"></label>
+      <button id="editorUndo">Undo</button>
+      <button id="editorClose">Cancel</button>
+      <button id="editorApply" class="primary">Apply</button>
+    </div>
+    <div id="editorCanvasWrap"><canvas id="editorCanvas"></canvas></div>
+  </div>
+</div>
 
 <script>
 const { PDFDocument, degrees } = PDFLib;
@@ -92,7 +114,7 @@ async function renderThumbnails(){
     wrap.appendChild(canvas);
     const actions = document.createElement('div');
     actions.className = 'actions';
-    actions.innerHTML = `<button data-act="rotate">⟳</button><button data-act="delete">✕</button>`;
+    actions.innerHTML = `<button data-act="edit">Edit</button><button data-act="rotate">⟳</button><button data-act="delete">✕</button>`;
     wrap.appendChild(actions);
     pagesEl.appendChild(wrap);
   }
@@ -119,6 +141,10 @@ function attachPageEvents(){
       const pos = parseInt(card.dataset.pos);
       pageOrder.splice(pos,1);
       renderThumbnails();
+    });
+    card.querySelector('[data-act="edit"]').addEventListener('click', ()=>{
+      const pos = parseInt(card.dataset.pos);
+      openEditor(pos);
     });
     card.querySelector('[data-act="rotate"]').addEventListener('click', async ()=>{
       const pos = parseInt(card.dataset.pos);
@@ -192,6 +218,126 @@ $('addTextBtn').addEventListener('click', async ()=>{
   const origIdx = pageOrder[pageNum-1];
   const page = pdfDoc.getPage(origIdx);
   page.drawText(text, { x: parseFloat(xStr)||50, y: parseFloat(yStr)||50, size: 18 });
+  await renderThumbnails();
+});
+
+// ---- Per-page manual editor ----
+let editorState = null; // {pos, origIdx, scale, tool, color, size, strokes, texts, drawing, currentPath, ctx}
+
+function hexToRgb01(hex){
+  const n = parseInt(hex.slice(1),16);
+  return { r: ((n>>16)&255)/255, g: ((n>>8)&255)/255, b: (n&255)/255 };
+}
+
+async function openEditor(pos){
+  const origIdx = pageOrder[pos];
+  const bytes = await pdfDoc.save();
+  const pjsDoc = await pdfjsLib.getDocument({data: bytes}).promise;
+  const pjsPage = await pjsDoc.getPage(origIdx+1);
+  const scale = 1.5;
+  const viewport = pjsPage.getViewport({scale});
+  const canvas = $('editorCanvas');
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  await pjsPage.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+
+  editorState = { pos, origIdx, scale, tool:'text', color:$('editorColor').value, size:parseInt($('editorSize').value), strokes:[], texts:[], drawing:false, currentPath:null, baseImage: canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height) };
+  $('editorOverlay').classList.remove('hidden');
+  setTool('text');
+}
+
+function setTool(tool){
+  editorState.tool = tool;
+  $('toolText').classList.toggle('active', tool==='text');
+  $('toolDraw').classList.toggle('active', tool==='draw');
+}
+$('toolText').addEventListener('click', ()=> setTool('text'));
+$('toolDraw').addEventListener('click', ()=> setTool('draw'));
+$('editorColor').addEventListener('change', e=> editorState.color = e.target.value);
+$('editorSize').addEventListener('change', e=> editorState.size = parseInt(e.target.value));
+$('editorClose').addEventListener('click', ()=> $('editorOverlay').classList.add('hidden'));
+
+function redrawEditorCanvas(){
+  const canvas = $('editorCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.putImageData(editorState.baseImage, 0, 0);
+  editorState.strokes.forEach(s=>{
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.size; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    s.points.forEach(([x,y],i)=> i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y));
+    ctx.stroke();
+  });
+  editorState.texts.forEach(t=>{
+    ctx.fillStyle = t.color; ctx.font = `${t.size*4}px sans-serif`;
+    ctx.fillText(t.text, t.x, t.y);
+  });
+}
+
+const editorCanvas = $('editorCanvas');
+editorCanvas.addEventListener('mousedown', e=>{
+  if (!editorState) return;
+  const rect = editorCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if (editorState.tool === 'text'){
+    const text = prompt('Text:');
+    if (text) { editorState.texts.push({x,y,text,color:editorState.color,size:editorState.size}); redrawEditorCanvas(); }
+  } else {
+    editorState.drawing = true;
+    editorState.currentPath = { points:[[x,y]], color:editorState.color, size:editorState.size };
+  }
+});
+editorCanvas.addEventListener('mousemove', e=>{
+  if (!editorState || !editorState.drawing) return;
+  const rect = editorCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  editorState.currentPath.points.push([x,y]);
+  redrawEditorCanvas();
+  const ctx = editorCanvas.getContext('2d');
+  ctx.strokeStyle = editorState.currentPath.color; ctx.lineWidth = editorState.currentPath.size; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath();
+  editorState.currentPath.points.forEach(([px,py],i)=> i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py));
+  ctx.stroke();
+});
+window.addEventListener('mouseup', ()=>{
+  if (editorState && editorState.drawing){
+    editorState.drawing = false;
+    editorState.strokes.push(editorState.currentPath);
+    editorState.currentPath = null;
+  }
+});
+
+$('editorUndo').addEventListener('click', ()=>{
+  if (!editorState) return;
+  if (editorState.texts.length && (!editorState.strokes.length)) editorState.texts.pop();
+  else if (editorState.strokes.length) editorState.strokes.pop();
+  redrawEditorCanvas();
+});
+
+$('editorApply').addEventListener('click', async ()=>{
+  const { origIdx, scale, texts, strokes } = editorState;
+  const page = pdfDoc.getPage(origIdx);
+  const pageHeight = page.getHeight();
+  texts.forEach(t=>{
+    page.drawText(t.text, {
+      x: t.x/scale,
+      y: pageHeight - t.y/scale,
+      size: t.size,
+      color: PDFLib.rgb(hexToRgb01(t.color).r, hexToRgb01(t.color).g, hexToRgb01(t.color).b)
+    });
+  });
+  strokes.forEach(s=>{
+    const c = hexToRgb01(s.color);
+    for (let i=1;i<s.points.length;i++){
+      const [x1,y1] = s.points[i-1], [x2,y2] = s.points[i];
+      page.drawLine({
+        start:{x:x1/scale, y: pageHeight - y1/scale},
+        end:{x:x2/scale, y: pageHeight - y2/scale},
+        thickness: s.size/scale,
+        color: PDFLib.rgb(c.r,c.g,c.b)
+      });
+    }
+  });
+  $('editorOverlay').classList.add('hidden');
+  editorState = null;
   await renderThumbnails();
 });
 
