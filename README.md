@@ -22,7 +22,7 @@ A little website that fixes PDFs for you — glue them together, chop them apart
 
 ---
 
-## Explain it like I'm 10
+## Explaination
 
 Imagine a PDF is a **stack of paper held together with a big paperclip**.
 
