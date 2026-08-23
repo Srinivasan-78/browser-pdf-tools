@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="900" height="320" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="900" height="320" fill="#f7f8fa"/>
+
+  <!-- Screen 1: Home -->
+  <g transform="translate(20,30)">
+    <rect width="190" height="250" rx="10" fill="#ffffff" stroke="#d4d8de"/>
+    <rect width="190" height="34" rx="10" fill="#2f6fed"/>
+    <rect y="24" width="190" height="10" fill="#2f6fed"/>
+    <text x="12" y="23" fill="#fff" font-size="13" font-weight="600">PDF Tools</text>
+    <g fill="#eef2fb" stroke="#c9d6f5">
+      <rect x="12" y="48" width="80" height="55" rx="8"/><rect x="98" y="48" width="80" height="55" rx="8"/>
+      <rect x="12" y="111" width="80" height="55" rx="8"/><rect x="98" y="111" width="80" height="55" rx="8"/>
+      <rect x="12" y="174" width="80" height="55" rx="8"/><rect x="98" y="174" width="80" height="55" rx="8"/>
+    </g>
+    <g font-size="16" text-anchor="middle">
+      <text x="52" y="72">🧩</text><text x="138" y="72">✂️</text>
+      <text x="52" y="135">🗑️</text><text x="138" y="135">🔀</text>
+      <text x="52" y="198">📝</text><text x="138" y="198">🔢</text>
+    </g>
+    <g font-size="8" fill="#5b6472" text-anchor="middle">
+      <text x="52" y="92">Merge</text><text x="138" y="92">Split</text>
+      <text x="52" y="155">Remove</text><text x="138" y="155">Reorder</text>
+      <text x="52" y="218">Edit Text</text><text x="138" y="218">Numbers</text>
+    </g>
+    <text x="95" y="272" font-size="11" fill="#3b4351" text-anchor="middle" font-weight="600">1. Pick a tool</text>
+  </g>
+
+  <!-- Screen 2: Upload -->
+  <g transform="translate(240,30)">
+    <rect width="190" height="250" rx="10" fill="#ffffff" stroke="#d4d8de"/>
+    <rect width="190" height="34" rx="10" fill="#2f6fed"/>
+    <rect y="24" width="190" height="10" fill="#2f6fed"/>
+    <text x="12" y="23" fill="#fff" font-size="13" font-weight="600">Merge PDF</text>
+    <rect x="18" y="70" width="154" height="110" rx="10" fill="#f2f6ff" stroke="#2f6fed" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="95" y="118" font-size="26" text-anchor="middle">📄</text>
+    <text x="95" y="142" font-size="9" fill="#5b6472" text-anchor="middle">Drop PDF here,</text>
+    <text x="95" y="155" font-size="9" fill="#5b6472" text-anchor="middle">or click to choose</text>
+    <text x="95" y="272" font-size="11" fill="#3b4351" text-anchor="middle" font-weight="600">2. Give it your file</text>
+  </g>
+
+  <!-- Screen 3: Workspace -->
+  <g transform="translate(460,30)">
+    <rect width="190" height="250" rx="10" fill="#ffffff" stroke="#d4d8de"/>
+    <rect width="190" height="34" rx="10" fill="#2f6fed"/>
+    <rect y="24" width="190" height="10" fill="#2f6fed"/>
+    <text x="12" y="23" fill="#fff" font-size="13" font-weight="600">Remove Pages</text>
+    <g>
+      <rect x="16" y="48" width="50" height="64" rx="4" fill="#fff" stroke="#c3c9d2"/>
+      <rect x="72" y="48" width="50" height="64" rx="4" fill="#fff" stroke="#e0574a" stroke-width="2" opacity="0.55"/>
+      <text x="97" y="86" font-size="20" fill="#e0574a" text-anchor="middle">✕</text>
+      <rect x="128" y="48" width="50" height="64" rx="4" fill="#fff" stroke="#c3c9d2"/>
+      <rect x="16" y="122" width="50" height="64" rx="4" fill="#fff" stroke="#c3c9d2"/>
+      <rect x="72" y="122" width="50" height="64" rx="4" fill="#fff" stroke="#c3c9d2"/>
+      <rect x="128" y="122" width="50" height="64" rx="4" fill="#fff" stroke="#c3c9d2"/>
+    </g>
+    <g stroke="#dfe3e9" stroke-width="2">
+      <path d="M24 60h34M24 68h34M24 76h26"/><path d="M136 60h34M136 68h34M136 76h26"/>
+      <path d="M24 134h34M24 142h34M24 150h26"/><path d="M80 134h34M80 142h34M80 150h26"/>
+      <path d="M136 134h34M136 142h34M136 150h26"/>
+    </g>
+    <rect x="62" y="200" width="66" height="24" rx="6" fill="#2f6fed"/>
+    <text x="95" y="216" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">Process</text>
+    <text x="95" y="272" font-size="11" fill="#3b4351" text-anchor="middle" font-weight="600">3. Click pages, press go</text>
+  </g>
+
+  <!-- Screen 4: Result -->
+  <g transform="translate(680,30)">
+    <rect width="190" height="250" rx="10" fill="#ffffff" stroke="#d4d8de"/>
+    <rect width="190" height="34" rx="10" fill="#2f6fed"/>
+    <rect y="24" width="190" height="10" fill="#2f6fed"/>
+    <text x="12" y="23" fill="#fff" font-size="13" font-weight="600">Done!</text>
+    <text x="95" y="110" font-size="34" text-anchor="middle">✅</text>
+    <text x="95" y="140" font-size="10" fill="#5b6472" text-anchor="middle">Your file is ready</text>
+    <rect x="52" y="158" width="86" height="26" rx="6" fill="#2f6fed"/>
+    <text x="95" y="175" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">⬇ Download</text>
+    <text x="95" y="272" font-size="11" fill="#3b4351" text-anchor="middle" font-weight="600">4. Take your new PDF</text>
+  </g>
+
+  <g stroke="#9aa4b2" stroke-width="2" fill="none" marker-end="url(#ar)">
+    <path d="M214 155h20"/><path d="M434 155h20"/><path d="M654 155h20"/>
+  </g>
+  <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0l6 3-6 3z" fill="#9aa4b2"/></marker></defs>
+</svg>

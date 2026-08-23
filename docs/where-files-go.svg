@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="880" height="300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="880" height="300" fill="#f7f8fa"/>
+  <text x="440" y="30" font-size="16" font-weight="700" fill="#22283a" text-anchor="middle">Where does your PDF actually go?</text>
+
+  <!-- Left: normal tools -->
+  <g>
+    <rect x="24" y="52" width="400" height="220" rx="12" fill="#eef7ef" stroke="#63b06b" stroke-width="2"/>
+    <text x="224" y="76" font-size="13" font-weight="700" fill="#2f6b39" text-anchor="middle">8 of the 9 tools — never leaves your computer</text>
+    <rect x="60" y="96" width="330" height="120" rx="10" fill="#fff" stroke="#b9d9bd"/>
+    <text x="225" y="118" font-size="11" fill="#3b4351" text-anchor="middle">Your browser (Chrome / Firefox / Safari)</text>
+    <text x="120" y="170" font-size="28" text-anchor="middle">📄</text>
+    <text x="225" y="170" font-size="22" text-anchor="middle">⚙️</text>
+    <text x="330" y="170" font-size="28" text-anchor="middle">📄</text>
+    <text x="120" y="192" font-size="9" fill="#5b6472" text-anchor="middle">your PDF</text>
+    <text x="225" y="192" font-size="9" fill="#5b6472" text-anchor="middle">pdf-lib does the work</text>
+    <text x="330" y="192" font-size="9" fill="#5b6472" text-anchor="middle">new PDF</text>
+    <text x="224" y="243" font-size="11" fill="#2f6b39" text-anchor="middle" font-weight="600">No internet needed. Nobody else sees it.</text>
+  </g>
+
+  <!-- Right: edit text -->
+  <g>
+    <rect x="456" y="52" width="400" height="220" rx="12" fill="#fff6ea" stroke="#e0a24a" stroke-width="2"/>
+    <text x="656" y="76" font-size="13" font-weight="700" fill="#8a5b12" text-anchor="middle">"Edit Text" only — needs a helper server</text>
+    <rect x="480" y="100" width="150" height="86" rx="10" fill="#fff" stroke="#e6cfa8"/>
+    <text x="555" y="122" font-size="10" fill="#3b4351" text-anchor="middle">Your browser</text>
+    <text x="555" y="156" font-size="24" text-anchor="middle">📄</text>
+    <rect x="682" y="100" width="150" height="86" rx="10" fill="#fff" stroke="#e6cfa8"/>
+    <text x="757" y="122" font-size="10" fill="#3b4351" text-anchor="middle">Your own server</text>
+    <text x="757" y="156" font-size="24" text-anchor="middle">🐍</text>
+    <text x="757" y="176" font-size="9" fill="#5b6472" text-anchor="middle">Python + PyMuPDF</text>
+    <g stroke="#c98f2e" stroke-width="2" fill="none" marker-end="url(#ar2)">
+      <path d="M634 132h44"/>
+    </g>
+    <g stroke="#c98f2e" stroke-width="2" fill="none" marker-end="url(#ar3)">
+      <path d="M678 164h-44"/>
+    </g>
+    <text x="656" y="126" font-size="8" fill="#8a5b12" text-anchor="middle">page + edits</text>
+    <text x="656" y="182" font-size="8" fill="#8a5b12" text-anchor="middle">fixed PDF</text>
+    <text x="656" y="243" font-size="11" fill="#8a5b12" text-anchor="middle" font-weight="600">You run that server yourself, so it's still your machine.</text>
+  </g>
+
+  <defs>
+    <marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0l6 3-6 3z" fill="#c98f2e"/></marker>
+    <marker id="ar3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0l6 3-6 3z" fill="#c98f2e"/></marker>
+  </defs>
+</svg>
