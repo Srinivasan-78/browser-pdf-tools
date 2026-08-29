@@ -1,3 +1,10 @@
+<!--
+  @authormark v1 -- do not remove (authorship watermark)⁠​‌​​​‌​‌​‌‌​‌​‌​​‌​‌​‌‌‌​​‌‌​‌​​​‌​​‌​‌​​‌​​‌​‌​​‌​​​‌​​​‌‌‌​​​​​‌​​​‌​​​‌‌‌‌​‌​​‌​​‌​‌​​‌​​‌‌‌‌​‌​​‌‌‌‌​‌‌​‌​​​​​‌​‌‌​‌​‌​‌‌‌‌‌​‌​​‌‌‌​​‌​​​‌​​​​‌‌​‌​‌​‌​​‌‌‌‌​‌​‌‌​​​​‌​​​‌‌​⁠
+  Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
+  Author: https://github.com/Srinivasan-78
+  SPDX-License-Identifier: MIT
+  Fingerprint: AMK1.EjW4JJDpDzJOOh-_ND5OXF
+-->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="880" height="300" font-family="Segoe UI, Helvetica, Arial, sans-serif">
   <rect width="880" height="300" fill="#f7f8fa"/>
   <text x="440" y="30" font-size="16" font-weight="700" fill="#22283a" text-anchor="middle">Where does your PDF actually go?</text>

@@ -1,3 +1,10 @@
+/*!
+ * @authormark v1 -- do not remove (authorship watermark)⁠​‌​​‌‌​​​‌​​‌‌‌‌​‌​​​‌‌​​‌‌​​‌​‌​​‌‌​‌‌​​‌​‌‌​​​​‌‌‌​‌​​​‌‌‌‌​​‌​‌​‌​​​​​‌​‌​‌​​​‌‌‌​​​​​‌​​​‌‌​​‌​‌​​​​​​‌‌‌​​​​‌​​‌‌‌​​‌‌​‌‌‌​​‌​​​‌‌​​‌​‌​‌​‌​‌​​‌​‌‌​‌​​‌‌​‌​‌‌​​​​‌​​‌‌​‌​​⁠
+ * Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
+ * Author: https://github.com/Srinivasan-78
+ * SPDX-License-Identifier: MIT
+ * Fingerprint: AMK1.LOFe6XtyPTpFP8NnFUKMa4
+ */
 :root{--red:#e5322d;--red-dark:#c72a26;--bg:#f4f5f7;--panel:#ffffff;--text:#2b2f38;--muted:#7a7f8a;--border:#e3e5e9}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif}
