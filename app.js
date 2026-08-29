@@ -1,3 +1,10 @@
+/*!
+ * @authormark v1 -- do not remove (authorship watermark)⁠​‌‌​‌‌‌​​‌‌​​​‌​​​‌‌‌​​‌​‌​​‌‌​​​‌​​‌​​​​‌​​​‌‌​​​‌‌​‌‌​​‌​​‌​‌​​‌‌​‌‌‌‌​​‌‌​‌​​​‌​‌‌​​​​​‌‌​‌‌​​‌​​​‌​​​‌​‌‌‌‌‌​‌​​‌​‌‌​‌‌‌​​‌​​‌​​‌‌​‌​​‌‌‌​​​​‌‌‌​‌​‌​‌​​​​‌​​‌​​​​‌‌​‌‌‌‌​​‌⁠
+ * Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
+ * Author: https://github.com/Srinivasan-78
+ * SPDX-License-Identifier: MIT
+ * Fingerprint: AMK1.nb9LHF6Jo4X6D_KrM8uBCy
+ */
 const { PDFDocument, degrees, rgb, StandardFonts } = PDFLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 

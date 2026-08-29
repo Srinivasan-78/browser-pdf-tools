@@ -1,0 +1,67 @@
+{
+  "schema": "authormark/manifest/1",
+  "author": "Srinivasan Vijayaraghavan",
+  "email": "srinivasan.shyam2000@gmail.com",
+  "github": "https://github.com/Srinivasan-78",
+  "sealedAt": "2026-08-29T13:21:47.618Z",
+  "fileCount": 11,
+  "digest": "df0d0e159dd3aba62a5c12e8073c82c5ddd6bed8b09b7a9be18daf2faac12931",
+  "proof": "2f3dc91eae198cd311bbe212f60a6084b91d69e89593da04146f9d858d2987eb",
+  "files": [
+    {
+      "path": ".github/workflows/authormark.yml",
+      "sha256": "b5cab2b0d7b18cd416758ec39f9677144704f615095f279d00e6f47ed2164e11",
+      "bytes": 1138
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "6f4bb78900bf58971b266a4df35ff4137cd210494cc71089ecc7f3feb6130012",
+      "bytes": 1511
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "a4f80ec424ce2382e519318c7cdbc38276dc8575a452e566c67f21c1eb0ca882",
+      "bytes": 822
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "b0dbf56da61fa6179dad54da13417494dbb6ef48e894c7f4c9a1cc7a2e615486",
+      "bytes": 992
+    },
+    {
+      "path": "README.md",
+      "sha256": "93762c6b80a32b1f143df53aacb0e2d3a7137d77b6af3267402c668960b7a00c",
+      "bytes": 15803
+    },
+    {
+      "path": "app.js",
+      "sha256": "30db7ec64098795a0abbe20f2d991eb591183027d3f3aef0321cb90669d712c8",
+      "bytes": 20452
+    },
+    {
+      "path": "docs/screens.svg",
+      "sha256": "4caed21da1fd5e4eae73375b621741a1d3232685f48cf7e7a9c99a64988b346d",
+      "bytes": 6021
+    },
+    {
+      "path": "docs/where-files-go.svg",
+      "sha256": "773d5ea4a4aa946a7a64ebac3994bcf464ce853972f75e8e3e71b8cd23f057c9",
+      "bytes": 4088
+    },
+    {
+      "path": "index.html",
+      "sha256": "7fca575f7bedcaa65a95e00affe051e5795893fee4710317f65922e743cbb881",
+      "bytes": 2553
+    },
+    {
+      "path": "main.py",
+      "sha256": "58cbb8a1810cfddf1c87949102ae10cf2d38d3ae54bbb16bb86a19b3e1ab3a61",
+      "bytes": 7296
+    },
+    {
+      "path": "style.css",
+      "sha256": "ef6d52ef74cc3db9ab7ee73147a3fecd97ea6c6ec443f24b24b754e214148a4c",
+      "bytes": 4394
+    }
+  ]
+}
