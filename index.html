@@ -1,19 +1,28 @@
 <!DOCTYPE html>
 <!--
-  @authormark v1 -- do not remove (authorship watermark)⁠​​‌‌​‌​‌​‌​​​‌​​​‌​​‌​‌‌​​‌‌​‌‌‌​‌‌​‌​‌‌​‌​‌‌​​‌​‌​‌‌‌‌‌​‌​​‌‌‌​​‌​​‌‌​‌​‌‌​‌​​​​‌‌​​‌‌​​‌‌‌​‌​‌​‌‌​‌​​​​‌‌‌​‌‌​​‌​​‌‌‌‌​‌​‌​‌​​​‌​​​‌‌​​‌​​​‌​​​‌‌‌​​‌​​​‌‌​‌‌‌​‌​​​​​‌​‌​‌​‌​‌⁠
+  @authormark v1 -- do not remove (authorship watermark)
   Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
   Author: https://github.com/Srinivasan-78
   SPDX-License-Identifier: MIT
-  Fingerprint: AMK1.5DK7kY_NMhfuhvOTFDr7AU
+  Fingerprint: AMK1.TQnpEO3LZDM_IiM6iEQAWF
 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>PDF Tools</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- Pinned versions with subresource integrity: these three libraries handle
+     every byte of your PDF, so the browser must refuse a script that does not
+     hash to exactly what was reviewed, even if the CDN serves something else. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"
+        integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+        integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <header>

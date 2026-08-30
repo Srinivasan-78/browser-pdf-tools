@@ -1,4 +1,7 @@
-fastapi
-uvicorn[standard]
-pymupdf
-python-multipart
+# Pinned so a fresh install a year from now builds the same backend. PyMuPDF in
+# particular moves things between releases, and an unpinned upgrade can break
+# main.py without a single line of it changing.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pymupdf==1.28.2
+python-multipart==0.0.32

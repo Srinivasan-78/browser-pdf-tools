@@ -1,8 +1,8 @@
-# @authormark v1 -- do not remove (authorship watermark)⁠​‌‌‌‌​​​​‌​​‌‌‌​​‌​​​​‌​​‌‌​​​‌‌​‌​‌​​‌‌​‌​‌‌​​‌​‌​‌‌​‌​​​‌‌‌​​​​‌​‌​​​​​‌​​‌‌‌​​‌​‌​​​‌​​‌‌‌​​‌​‌​‌​‌​‌​‌​​‌‌‌​​‌‌​​​‌​​‌​‌‌​‌​​‌‌‌​​​​​‌‌‌‌​​​​‌‌‌​​​​​​‌‌​​‌​​‌‌‌​‌​​​‌‌​​​‌​⁠
+# @authormark v1 -- do not remove (authorship watermark)
 # Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
 # Author: https://github.com/Srinivasan-78
 # SPDX-License-Identifier: MIT
-# Fingerprint: AMK1.xNBcSYZ8PNQ9UNbZpxp2tb
+# Fingerprint: AMK1.LqyY5R83zz-ViC4aT8e-L8
 """
 PDF Tools backend — real text editing via PyMuPDF (MuPDF core).
 
@@ -28,7 +28,7 @@ import io
 import json
 
 import pymupdf
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -78,10 +78,61 @@ def pick_fallback_font(flags: int) -> str:
     return "Helvetica"
 
 
+def open_pdf(data: bytes):
+    """Open an upload, or answer 400 saying why.
+
+    Without this a corrupt or non-PDF upload surfaces as a bare 500, which
+    reads as "the server is broken" rather than "that file is not a PDF".
+    """
+    if not data:
+        raise HTTPException(status_code=400, detail="no file content received")
+    try:
+        return pymupdf.open(stream=data, filetype="pdf")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"could not open this file as a PDF: {exc}") from exc
+
+
+def parse_edits(edits: str):
+    """Validate the edits form field before any of it is trusted.
+
+    Every key read later -- page, bbox -- is checked here, so a malformed
+    request fails with a description of what is wrong instead of a KeyError
+    or an IndexError halfway through mutating the document.
+    """
+    try:
+        edit_list = json.loads(edits)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"edits is not valid JSON: {exc}") from exc
+
+    if not isinstance(edit_list, list):
+        raise HTTPException(status_code=400, detail="edits must be a JSON array")
+
+    for i, e in enumerate(edit_list):
+        if not isinstance(e, dict):
+            raise HTTPException(status_code=400, detail=f"edits[{i}] is not an object")
+        if not isinstance(e.get("page"), int) or isinstance(e.get("page"), bool):
+            raise HTTPException(status_code=400, detail=f"edits[{i}].page must be an integer")
+        bbox = e.get("bbox")
+        if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+            raise HTTPException(status_code=400, detail=f"edits[{i}].bbox must be four numbers")
+        if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in bbox):
+            raise HTTPException(status_code=400, detail=f"edits[{i}].bbox must be four numbers")
+        if not isinstance(e.get("newText"), str):
+            raise HTTPException(status_code=400, detail=f"edits[{i}].newText must be a string")
+
+    return edit_list
+
+
 @app.post("/api/inspect")
 async def inspect(file: UploadFile = File(...), page: int = Form(...)):
     data = await file.read()
-    doc = pymupdf.open(stream=data, filetype="pdf")
+    doc = open_pdf(data)
+    if not 0 <= page < doc.page_count:
+        doc.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"page {page} out of range: this document has {doc.page_count} pages",
+        )
     pg = doc[page]
     rect = pg.rect
     raw = pg.get_text("dict")
@@ -118,12 +169,19 @@ async def inspect(file: UploadFile = File(...), page: int = Form(...)):
 @app.post("/api/apply-edits")
 async def apply_edits(file: UploadFile = File(...), edits: str = Form(...)):
     data = await file.read()
-    edit_list = json.loads(edits)
-    doc = pymupdf.open(stream=data, filetype="pdf")
+    edit_list = parse_edits(edits)
+    doc = open_pdf(data)
 
     by_page = {}
     for e in edit_list:
-        by_page.setdefault(e["page"], []).append(e)
+        page_num = e["page"]
+        if not 0 <= page_num < doc.page_count:
+            doc.close()
+            raise HTTPException(
+                status_code=400,
+                detail=f"edit targets page {page_num}, but this document has {doc.page_count} pages",
+            )
+        by_page.setdefault(page_num, []).append(e)
 
     for page_num, page_edits in by_page.items():
         pg = doc[page_num]

@@ -1,9 +1,9 @@
 /*!
- * @authormark v1 -- do not remove (authorship watermark)⁠​‌‌​‌‌‌​​‌‌​​​‌​​​‌‌‌​​‌​‌​​‌‌​​​‌​​‌​​​​‌​​​‌‌​​​‌‌​‌‌​​‌​​‌​‌​​‌‌​‌‌‌‌​​‌‌​‌​​​‌​‌‌​​​​​‌‌​‌‌​​‌​​​‌​​​‌​‌‌‌‌‌​‌​​‌​‌‌​‌‌‌​​‌​​‌​​‌‌​‌​​‌‌‌​​​​‌‌‌​‌​‌​‌​​​​‌​​‌​​​​‌‌​‌‌‌‌​​‌⁠
+ * @authormark v1 -- do not remove (authorship watermark)
  * Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
  * Author: https://github.com/Srinivasan-78
  * SPDX-License-Identifier: MIT
- * Fingerprint: AMK1.nb9LHF6Jo4X6D_KrM8uBCy
+ * Fingerprint: AMK1.FtnRXjFGJXQNsyFH8wCNsX
  */
 const { PDFDocument, degrees, rgb, StandardFonts } = PDFLib;
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -148,7 +148,17 @@ function buildFileList(){
     const li = document.createElement('li');
     li.draggable = true;
     li.dataset.pos = i;
-    li.innerHTML = `<span>${f.name}</span><span style="color:var(--muted);font-size:12px">drag to reorder</span>`;
+    // textContent, not innerHTML: a filename is attacker-controlled input.
+    // A file named `<img src=x onerror=...>.pdf` would otherwise run as script
+    // in this page, which is exactly the thing "your file never leaves the
+    // browser" is supposed to rule out.
+    const nameEl = document.createElement('span');
+    nameEl.textContent = f.name;
+    const hintEl = document.createElement('span');
+    hintEl.style.color = 'var(--muted)';
+    hintEl.style.fontSize = '12px';
+    hintEl.textContent = 'drag to reorder';
+    li.append(nameEl, hintEl);
     li.addEventListener('dragstart', ()=> li.classList.add('dragging'));
     li.addEventListener('dragend', ()=> li.classList.remove('dragging'));
     li.addEventListener('dragover', e=> e.preventDefault());
