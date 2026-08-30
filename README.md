@@ -1,9 +1,9 @@
 <!--
-  @authormark v1 -- do not remove (authorship watermark)⁠​‌​‌‌‌‌‌​‌‌‌‌​​‌​​‌‌​‌​‌​‌‌​‌​​​​​‌‌‌​​‌​‌​‌​​​​​‌​​‌​‌‌​‌​‌​‌‌​​‌​‌​‌‌‌​‌​​‌‌‌‌​‌‌​‌‌​‌​‌​​‌‌​‌​​‌‌​​​​​​‌‌​‌‌‌​‌‌‌‌​​‌​‌​‌​‌​‌​‌​‌‌​‌​​‌‌‌​​‌‌​‌​​​‌‌​​‌​​‌​‌‌​​‌‌​‌‌​​‌​‌‌​​‌⁠
+  @authormark v1 -- do not remove (authorship watermark)
   Copyright (c) 2026 Srinivasan Vijayaraghavan <srinivasan.shyam2000@gmail.com>
   Author: https://github.com/Srinivasan-78
   SPDX-License-Identifier: MIT
-  Fingerprint: AMK1._y5h9PKVWOmM07yUZsFK6Y
+  Fingerprint: AMK1.N32Od7UZh-LvuFP3ION-Qc
 -->
 # 📄 PDF Tools
 
@@ -78,7 +78,7 @@ flowchart TD
     style E fill:#eef7ef,stroke:#63b06b
 ```
 
-The whole website is **one single page**. There are four `<section>` blocks in `index.html`, and only one of them is visible at a time. "Changing screens" is really just JavaScript adding the CSS class `active` to one section and taking it off the others — the function `showScreen()` in `app.js:30`. Nothing ever reloads.
+The whole website is **one single page**. There are four `<section>` blocks in `index.html`, and only one of them is visible at a time. "Changing screens" is really just JavaScript adding the CSS class `active` to one section and taking it off the others — the function `showScreen()` in `app.js:37`. Nothing ever reloads.
 
 ---
 
@@ -110,13 +110,19 @@ Writing PDF code from scratch would take years, so the site loads two free tools
 
 They're loaded by the three `<script>` tags at the top of `index.html`. That's the *only* thing the site fetches from the internet.
 
+Each of those tags carries an `integrity="sha384-…"` fingerprint of the exact file that was reviewed. The browser hashes what the CDN sends and refuses to run it if the two do not match. These three libraries touch every byte of your PDF, so "whatever the CDN happens to serve today" is not good enough. If you bump a version, recompute the hash:
+
+```bash
+curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A
+```
+
 ---
 
 ## How the code actually works
 
 ### 1. There is one big notebook called `state`
 
-Everything the app is currently thinking about lives in one object (`app.js:23`):
+Everything the app is currently thinking about lives in one object (`app.js:33`):
 
 ```js
 state = {
@@ -135,7 +141,7 @@ state = {
 
 Pressing **← Tools** or **Start over** calls `resetState()`, which throws the whole notebook away and starts fresh. That's why the app never gets confused between two jobs.
 
-The clever bit is `pageOrder`. The app almost never *really* moves pages around while you're working — it just rearranges this little list of numbers. Only at the very end does it build a real PDF by copying pages in that order (`copyOrderTo()`, `app.js:411`). Shuffling numbers is instant; shuffling actual PDF pages is slow.
+The clever bit is `pageOrder`. The app almost never *really* moves pages around while you're working — it just rearranges this little list of numbers. Only at the very end does it build a real PDF by copying pages in that order (`copyOrderTo()`, `app.js:428`). Shuffling numbers is instant; shuffling actual PDF pages is slow.
 
 ### 2. What happens when you drop a file in
 
@@ -156,7 +162,7 @@ sequenceDiagram
     Browser->>You: show the thumbnail grid
 ```
 
-Those little page pictures ("thumbnails") are made in `renderThumbs()` (`app.js:164`). For each page, pdf.js paints it onto a `<canvas>` at 40% size — a canvas is just a rectangle the browser can draw pixels on. Then, depending on which tool you chose, the code attaches different behavior to each thumbnail:
+Those little page pictures ("thumbnails") are made in `renderThumbs()` (`app.js:181`). For each page, pdf.js paints it onto a `<canvas>` at 40% size — a canvas is just a rectangle the browser can draw pixels on. Then, depending on which tool you chose, the code attaches different behavior to each thumbnail:
 
 - **Remove** → clicking toggles it into `removedSet` and shows a ✕
 - **Extract** → clicking toggles it in `keepSet` and shows a ✓ (everything starts selected)
@@ -168,7 +174,7 @@ Same grid, different personality. That's the whole design of the app.
 
 ### 3. What happens when you press Process
 
-One `switch` statement (`app.js:371`) sends you to the right function:
+One `switch` statement (`app.js:388`) sends you to the right function:
 
 ```mermaid
 flowchart LR
@@ -189,11 +195,11 @@ flowchart LR
 
 Notice how boring most of them are — Remove, Extract and Reorder are *the same function* with a different list of page numbers. Once you see that, the app is much smaller than it looks.
 
-At the end, `showResult()` (`app.js:475`) turns the finished bytes into a **Blob** (a pretend file that only exists in memory) and makes a URL for it. Clicking Download creates an invisible `<a download>` link and clicks it for you. The "file" was never on any server — it was invented in your RAM about a second earlier.
+At the end, `showResult()` (`app.js:492`) turns the finished bytes into a **Blob** (a pretend file that only exists in memory) and makes a URL for it. Clicking Download creates an invisible `<a download>` link and clicks it for you. The "file" was never on any server — it was invented in your RAM about a second earlier.
 
 ### 4. Two gotchas worth knowing
 
-**PDF coordinates are upside down.** In a browser, y=0 is the *top*. In a PDF, y=0 is the *bottom*. So when you click to add text, the code has to flip it (`app.js:452`):
+**PDF coordinates are upside down.** In a browser, y=0 is the *top*. In a PDF, y=0 is the *bottom*. So when you click to add text, the code has to flip it (`app.js:469`):
 
 ```js
 y: pageHeight - t.y / t.scale
@@ -265,7 +271,7 @@ docker build -t pdf-backend .
 docker run -p 8000:8000 pdf-backend
 ```
 
-Then open `app.js` and point line 7 at wherever it's running:
+Then open `app.js` and point `BACKEND_URL` (line 14) at wherever it's running:
 
 ```js
 const BACKEND_URL = "http://localhost:8000";
@@ -283,6 +289,11 @@ const BACKEND_URL = "http://localhost:8000";
 For the eight offline tools: your file is opened, changed, and saved entirely inside your browser tab. No upload, no server, no logs, no account, no cookies. Close the tab and every trace is gone.
 
 For Edit Text: the PDF is sent to the helper server — which is a program **you** started, on a machine **you** control. It holds the file in memory, does the edit, sends it back, and keeps nothing.
+
+Two details that keep that promise honest:
+
+- **Filenames are text, never markup.** The merge list writes each name with `textContent`, so a file called `<img src=x onerror=…>.pdf` shows up as that literal string instead of running as code. It used to be built with `innerHTML`, which meant a crafted filename could execute script in the page — and a script in the page can read the very bytes this section promises never leave your machine.
+- **The helper server validates before it trusts.** A page number outside the document, malformed `edits` JSON, a missing `bbox` or a non-PDF upload all come back as a `400` explaining what was wrong, rather than a `500` that looks like the server broke.
 
 ---
 
