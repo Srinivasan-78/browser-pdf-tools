@@ -44,6 +44,27 @@ app.add_middleware(
 )
 
 
+FALLBACK_FONTS = {
+    # (bold, italic, serif, mono)
+    (False, False, False, False): "Helvetica",
+    (True, False, False, False): "Helvetica-Bold",
+    (False, True, False, False): "Helvetica-Oblique",
+    (True, True, False, False): "Helvetica-BoldOblique",
+    (False, False, True, False): "Times-Roman",
+    (True, False, True, False): "Times-Bold",
+    (False, True, True, False): "Times-Italic",
+    (True, True, True, False): "Times-BoldItalic",
+    (False, False, False, True): "Courier",
+    (True, False, False, True): "Courier-Bold",
+    (False, True, False, True): "Courier-Oblique",
+    (True, True, False, True): "Courier-BoldOblique",
+    (False, False, True, True): "Courier",
+    (True, False, True, True): "Courier-Bold",
+    (False, True, True, True): "Courier-Oblique",
+    (True, True, True, True): "Courier-BoldOblique",
+}
+
+
 def pick_fallback_font(flags: int) -> str:
     """Metric-matched PDF standard font, used only when the original font
     can't be extracted/embedded. Bits per PyMuPDF span['flags']:
@@ -52,30 +73,7 @@ def pick_fallback_font(flags: int) -> str:
     italic = bool(flags & (1 << 1))
     serif = bool(flags & (1 << 2))
     mono = bool(flags & (1 << 3))
-
-    if mono:
-        if bold and italic:
-            return "Courier-BoldOblique"
-        if bold:
-            return "Courier-Bold"
-        if italic:
-            return "Courier-Oblique"
-        return "Courier"
-    if serif:
-        if bold and italic:
-            return "Times-BoldItalic"
-        if bold:
-            return "Times-Bold"
-        if italic:
-            return "Times-Italic"
-        return "Times-Roman"
-    if bold and italic:
-        return "Helvetica-BoldOblique"
-    if bold:
-        return "Helvetica-Bold"
-    if italic:
-        return "Helvetica-Oblique"
-    return "Helvetica"
+    return FALLBACK_FONTS.get((bold, italic, serif, mono), "Helvetica")
 
 
 def open_pdf(data: bytes):
