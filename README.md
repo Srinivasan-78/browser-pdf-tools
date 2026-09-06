@@ -241,6 +241,8 @@ sequenceDiagram
     Browser->>You: Download
 ```
 
+*Note: In the browser UI, if `BACKEND_URL` is left empty in `app.js`, the "Edit Text" tool card is cleanly disabled and dimmed with instructions to start `main.py`.*
+
 **Redaction, in kid terms:** a white sticker over a word is a lie — the word is still under it. PyMuPDF's `add_redact_annot` + `apply_redactions` is more like *dissolving* the ink. The letters are genuinely gone from the file.
 
 **Font matching:** the server looks up the original font by its `xref` (a PDF's internal address number), extracts it, and re-embeds it so your new text is indistinguishable. If the font isn't embedded — some PDFs just say "use Helvetica, you've probably got it" — it falls back to the closest standard font, picking bold/italic/serif/mono from the style flags. That's `pick_fallback_font()` in `main.py`.

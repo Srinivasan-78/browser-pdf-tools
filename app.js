@@ -46,9 +46,16 @@ function buildHome(){
   grid.innerHTML='';
   TOOLS.forEach(t=>{
     const card = document.createElement('div');
-    card.className='tool-card';
-    card.innerHTML = `<div class="emoji">${t.emoji}</div><div class="name">${t.name}</div><div class="desc">${t.desc}</div>`;
-    card.addEventListener('click', ()=> openTool(t.id));
+    const isEditDisabled = (t.id === 'edit' && !BACKEND_URL);
+    card.className = 'tool-card' + (isEditDisabled ? ' disabled' : '');
+    card.innerHTML = `<div class="emoji">${t.emoji}</div><div class="name">${t.name}</div><div class="desc">${isEditDisabled ? 'Requires backend configured' : t.desc}</div>`;
+    if (isEditDisabled) {
+      card.title = 'Edit Text needs a backend configured (BACKEND_URL in app.js)';
+      card.style.opacity = '0.5';
+      card.style.cursor = 'not-allowed';
+    } else {
+      card.addEventListener('click', ()=> openTool(t.id));
+    }
     grid.appendChild(card);
   });
 }
@@ -57,6 +64,7 @@ buildHome();
 $('backBtn').addEventListener('click', ()=>{ resetState(); $('pageTitle').textContent='PDF Tools'; showScreen('screen-home'); });
 
 function openTool(id){
+  if (id === 'edit' && !BACKEND_URL) return;
   resetState();
   state.tool = TOOLS.find(t=>t.id===id);
   $('pageTitle').textContent = state.tool.name;
@@ -256,6 +264,19 @@ async function renderThumbs(){
   }
 }
 
+// --- Shared helper to render a PDF page onto a canvas ---
+async function renderPageToCanvas(pageIndex, canvas, scale = 1.6){
+  const bytes = await state.pdfDoc.save();
+  const pjsDoc = await pdfjsLib.getDocument({data:bytes}).promise;
+  const pjsPage = await pjsDoc.getPage(pageIndex + 1);
+  const viewport = pjsPage.getViewport({scale});
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  canvas.style.width = viewport.width + 'px';
+  canvas.style.height = viewport.height + 'px';
+  await pjsPage.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+  return viewport;
+}
+
 // --- Edit Text tool: click existing text runs (from the backend) and change them in place ---
 async function openEditTextEditor(pos){
   if (!BACKEND_URL){
@@ -265,16 +286,8 @@ async function openEditTextEditor(pos){
   const origIdx = state.pageOrder[pos];
 
   // render the visual canvas locally (fast, no round trip)
-  const bytes = await state.pdfDoc.save();
-  const pjsDoc = await pdfjsLib.getDocument({data:bytes}).promise;
-  const pjsPage = await pjsDoc.getPage(origIdx+1);
-  const scale = 1.6;
-  const viewport = pjsPage.getViewport({scale});
   const canvas = $('editorCanvas');
-  canvas.width = viewport.width; canvas.height = viewport.height;
-  canvas.style.width = viewport.width + 'px';
-  canvas.style.height = viewport.height + 'px';
-  await pjsPage.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+  const viewport = await renderPageToCanvas(origIdx, canvas, 1.6);
 
   const layer = $('textLayer');
   layer.style.width = viewport.width+'px';
@@ -339,16 +352,9 @@ async function openEditTextEditor(pos){
 // --- Add Text tool: click-to-place on a single page ---
 async function openTextEditor(pos){
   const origIdx = state.pageOrder[pos];
-  const bytes = await state.pdfDoc.save();
-  const pjsDoc = await pdfjsLib.getDocument({data:bytes}).promise;
-  const pjsPage = await pjsDoc.getPage(origIdx+1);
   const scale = 1.4;
-  const viewport = pjsPage.getViewport({scale});
   const canvas = $('editorCanvas');
-  canvas.width = viewport.width; canvas.height = viewport.height;
-  canvas.style.width = viewport.width + 'px';
-  canvas.style.height = viewport.height + 'px';
-  await pjsPage.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+  await renderPageToCanvas(origIdx, canvas, scale);
   $('editorCanvasWrap').classList.remove('hidden');
   $('editorCanvasWrap').scrollIntoView({behavior:'smooth'});
 
@@ -394,7 +400,15 @@ $('processBtn').addEventListener('click', async ()=>{
       case 'rotate': { outBytes = await doRotate(); filename='rotated.pdf'; break; }
       case 'numbers': { outBytes = await doPageNumbers(); filename='numbered.pdf'; break; }
       case 'text': { outBytes = await doAddText(); filename='edited.pdf'; break; }
-      case 'edit': { outBytes = await doEditText(); filename='edited.pdf'; break; }
+      case 'edit': {
+        if (!BACKEND_URL) {
+          $('workspaceStatus').textContent = 'Edit Text needs a backend configured (BACKEND_URL in app.js).';
+          return;
+        }
+        outBytes = await doEditText();
+        filename='edited.pdf';
+        break;
+      }
     }
     showResult(outBytes, filename, mime);
   } catch(err){
