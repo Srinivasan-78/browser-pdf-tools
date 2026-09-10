@@ -5,8 +5,16 @@
  * SPDX-License-Identifier: MIT
  * Fingerprint: AMK1.FtnRXjFGJXQNsyFH8wCNsX
  */
-const { PDFDocument, degrees, rgb, StandardFonts } = PDFLib;
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+let PDFDocument, degrees, rgb, StandardFonts;
+function initLibraries() {
+  if (typeof PDFLib !== 'undefined' && !PDFDocument) {
+    ({ PDFDocument, degrees, rgb, StandardFonts } = PDFLib);
+  }
+  if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+}
+initLibraries();
 
 // URL of the FastAPI + PyMuPDF backend (see /backend). Required only for the
 // "Edit Text" tool, which needs real font extraction/content-stream editing
@@ -59,7 +67,16 @@ function buildHome(){
     grid.appendChild(card);
   });
 }
-buildHome();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initLibraries();
+    buildHome();
+  });
+} else {
+  initLibraries();
+  buildHome();
+}
 
 $('backBtn').addEventListener('click', ()=>{ resetState(); $('pageTitle').textContent='PDF Tools'; showScreen('screen-home'); });
 
@@ -84,6 +101,7 @@ dropzone.addEventListener('drop', e=> handleFiles([...e.dataTransfer.files].filt
 $('fileInput').addEventListener('change', e=> handleFiles([...e.target.files]));
 
 async function handleFiles(files){
+  initLibraries();
   if (!files.length) return;
   if (!state.tool.multi) files = files.slice(0,1);
   state.files = files;
