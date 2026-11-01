@@ -3,5 +3,5 @@
 # main.py without a single line of it changing.
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
-pymupdf==1.28.2
+pymupdf==2.0
 python-multipart==0.0.32
